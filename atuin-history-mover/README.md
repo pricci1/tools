@@ -1,3 +1,8 @@
+---
+name: Atuin History Mover
+purpose: Move or copy shell history between directories
+---
+
 Atuin History Mover - Move or copy shell history between directories
 
 USAGE:
