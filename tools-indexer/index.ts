@@ -10,16 +10,16 @@ let outputFile = args[1];
 let generateJustfile = false;
 
 if (!rootDir) {
-  console.error("Usage: bun run index.ts <directory> [output-file] [--just]");
-  process.exit(1);
+	console.error("Usage: bun run index.ts <directory> [output-file] [--just]");
+	process.exit(1);
 }
 
 const flagIndex = args.indexOf("--just");
 if (flagIndex !== -1) {
-  generateJustfile = true;
-  const argsWithoutJustFlag = args.toSpliced(flagIndex, 1);
-  rootDir = argsWithoutJustFlag[0];
-  outputFile = argsWithoutJustFlag[1];
+	generateJustfile = true;
+	const argsWithoutJustFlag = args.toSpliced(flagIndex, 1);
+	rootDir = argsWithoutJustFlag[0];
+	outputFile = argsWithoutJustFlag[1];
 }
 
 console.error(`Scanning ${rootDir} for tools...`);
@@ -27,44 +27,44 @@ console.error(`Scanning ${rootDir} for tools...`);
 const glob = new Glob("**/README.md");
 
 interface Tool {
-  name: string;
-  purpose: string;
-  link: string;
-  path: string;
+	name: string;
+	purpose: string;
+	link: string;
+	path: string;
 }
 
 const tools: Tool[] = [];
 
 // Scan for README.md files
 for await (const file of glob.scan({ cwd: rootDir })) {
-  const fullPath = join(rootDir, file);
+	const fullPath = join(rootDir, file);
 
-  if (file.includes("node_modules")) continue;
+	if (file.includes("node_modules")) continue;
 
-  try {
-    const fileContent = await Bun.file(fullPath).text();
-    const { data } = matter(fileContent);
+	try {
+		const fileContent = await Bun.file(fullPath).text();
+		const { data } = matter(fileContent);
 
-    if (data.name && data.purpose) {
-      const toolDir = dirname(file);
-      // If we are writing to a file, links should be relative to that file.
-      // If printing to stdout, links relative to cwd (which we assume is where we run it from?)
-      // Let's make links relative to the rootDir for now, or if outputFile is present, relative to that.
+		if (data.name && data.purpose) {
+			const toolDir = dirname(file);
+			// If we are writing to a file, links should be relative to that file.
+			// If printing to stdout, links relative to cwd (which we assume is where we run it from?)
+			// Let's make links relative to the rootDir for now, or if outputFile is present, relative to that.
 
-      // Assuming the index file will be placed in rootDir if not specified,
-      // or we just link to the relative path found by glob.
-      const link = `./${toolDir}`;
+			// Assuming the index file will be placed in rootDir if not specified,
+			// or we just link to the relative path found by glob.
+			const link = `./${toolDir}`;
 
-      tools.push({
-        name: data.name,
-        purpose: data.purpose,
-        link: link,
-        path: file,
-      });
-    }
-  } catch (error) {
-    console.error(`Error reading ${file}:`, error);
-  }
+			tools.push({
+				name: data.name,
+				purpose: data.purpose,
+				link: link,
+				path: file,
+			});
+		}
+	} catch (error) {
+		console.error(`Error reading ${file}:`, error);
+	}
 }
 
 tools.sort((a, b) => a.name.localeCompare(b.name));
@@ -83,26 +83,26 @@ const template = Handlebars.compile(templateSource);
 const output = template({ tools });
 
 if (outputFile) {
-  await Bun.write(outputFile, output);
-  console.error(`Tools index written to ${outputFile}`);
+	await Bun.write(outputFile, output);
+	console.error(`Tools index written to ${outputFile}`);
 } else {
-  console.log(output);
+	console.log(output);
 }
 
 if (generateJustfile) {
-  const outputDir = outputFile ? dirname(outputFile) : rootDir;
-  if (!outputDir) {
-    console.error("Couldn't determine output directory for the Justfile");
-    process.exit(1);
-  }
-  const justfileContent = generateJustfileContent(tools);
-  const justfilePath = join(outputDir, "Justfile");
-  await Bun.write(justfilePath, justfileContent);
-  console.error(`Justfile written to ${justfilePath}`);
+	const outputDir = outputFile ? dirname(outputFile) : rootDir;
+	if (!outputDir) {
+		console.error("Couldn't determine output directory for the Justfile");
+		process.exit(1);
+	}
+	const justfileContent = generateJustfileContent(tools);
+	const justfilePath = join(outputDir, "Justfile");
+	await Bun.write(justfilePath, justfileContent);
+	console.error(`Justfile written to ${justfilePath}`);
 }
 
 function generateJustfileContent(tools: Tool[]): string {
-  const justfileTemplate = `# Auto-generated. Do not edit manually.
+	const justfileTemplate = `# Auto-generated. Do not edit manually.
 
 default: list
 
@@ -117,10 +117,10 @@ install-all:
     cd {{toolDir}} && bun install
 {{/each}}`;
 
-  const template = Handlebars.compile(justfileTemplate);
-  const toolsWithDir = tools.map((tool) => ({
-    ...tool,
-    toolDir: tool.path.split("/")[0],
-  }));
-  return template({ tools: toolsWithDir });
+	const template = Handlebars.compile(justfileTemplate);
+	const toolsWithDir = tools.map((tool) => ({
+		...tool,
+		toolDir: tool.path.split("/")[0],
+	}));
+	return template({ tools: toolsWithDir });
 }
