@@ -1,3 +1,8 @@
+---
+name: Tools Indexer
+purpose: Scans directories for READMEs with frontmatter and generates a tools index Markdown file
+---
+
 # tools-indexer
 
 To install dependencies:
@@ -9,7 +14,5 @@ bun install
 To run:
 
 ```bash
-bun run index.ts
+bun run index.ts <directory> [output-file]
 ```
-
-This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
