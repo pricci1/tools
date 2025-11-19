@@ -5,12 +5,21 @@ import { join, relative, dirname } from "node:path";
 
 const args = Bun.argv.slice(2);
 
-const rootDir = args[0];
-const outputFile = args[1];
+let rootDir = args[0];
+let outputFile = args[1];
+let generateJustfile = false;
 
 if (!rootDir) {
-  console.error("Usage: bun run index.ts <directory> [output-file]");
+  console.error("Usage: bun run index.ts <directory> [output-file] [--just]");
   process.exit(1);
+}
+
+const flagIndex = args.indexOf("--just");
+if (flagIndex !== -1) {
+  generateJustfile = true;
+  const argsWithoutJustFlag = args.toSpliced(flagIndex, 1);
+  rootDir = argsWithoutJustFlag[0];
+  outputFile = argsWithoutJustFlag[1];
 }
 
 console.error(`Scanning ${rootDir} for tools...`);
@@ -78,4 +87,40 @@ if (outputFile) {
   console.error(`Tools index written to ${outputFile}`);
 } else {
   console.log(output);
+}
+
+if (generateJustfile) {
+  const outputDir = outputFile ? dirname(outputFile) : rootDir;
+  if (!outputDir) {
+    console.error("Couldn't determine output directory for the Justfile");
+    process.exit(1);
+  }
+  const justfileContent = generateJustfileContent(tools);
+  const justfilePath = join(outputDir, "Justfile");
+  await Bun.write(justfilePath, justfileContent);
+  console.error(`Justfile written to ${justfilePath}`);
+}
+
+function generateJustfileContent(tools: Tool[]): string {
+  const justfileTemplate = `# Auto-generated. Do not edit manually.
+
+default: list
+
+list:
+    @cat README.md
+
+index:
+    cd tools-indexer && bun run index.ts .. ../README.md --just
+
+install-all:
+{{#each tools}}
+    cd {{toolDir}} && bun install
+{{/each}}`;
+
+  const template = Handlebars.compile(justfileTemplate);
+  const toolsWithDir = tools.map((tool) => ({
+    ...tool,
+    toolDir: tool.path.split("/")[0],
+  }));
+  return template({ tools: toolsWithDir });
 }
