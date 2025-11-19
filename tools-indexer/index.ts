@@ -29,6 +29,7 @@ interface Tool {
 	purpose: string;
 	link: string;
 	path: string;
+	lang?: "bun";
 }
 
 async function scanToolsDirectory(rootDir: string): Promise<Tool[]> {
@@ -49,11 +50,16 @@ async function scanToolsDirectory(rootDir: string): Promise<Tool[]> {
 				const toolDir = dirname(file);
 				const link = `./${toolDir}`;
 
+				// Check if tool uses Bun
+				const bunLockPath = join(rootDir, toolDir, "bun.lock");
+				const hasBunLock = await Bun.file(bunLockPath).exists();
+
 				scannedTools.push({
 					name: data.name,
 					purpose: data.purpose,
 					link: link,
 					path: file,
+					lang: hasBunLock ? "bun" : undefined,
 				});
 			}
 		} catch (error) {
@@ -117,9 +123,11 @@ install-all:
 {{/each}}`;
 
 	const template = Handlebars.compile(justfileTemplate);
-	const toolsWithDir = tools.map((tool) => ({
-		...tool,
-		toolDir: tool.path.split("/")[0],
-	}));
-	return template({ tools: toolsWithDir });
+	const bunTools = tools
+		.filter((tool) => tool.lang === "bun")
+		.map((tool) => ({
+			...tool,
+			toolDir: tool.path.split("/")[0],
+		}));
+	return template({ tools: bunTools });
 }
