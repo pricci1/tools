@@ -9,17 +9,17 @@ let rootDir = args[0];
 let outputFile = args[1];
 let generateJustfile = false;
 
-if (!rootDir) {
-	console.error("Usage: bun run index.ts <directory> [output-file] [--just]");
-	process.exit(1);
-}
-
 const flagIndex = args.indexOf("--just");
 if (flagIndex !== -1) {
 	generateJustfile = true;
 	const argsWithoutJustFlag = args.toSpliced(flagIndex, 1);
 	rootDir = argsWithoutJustFlag[0];
 	outputFile = argsWithoutJustFlag[1];
+}
+
+if (!rootDir) {
+	console.error("Usage: bun run index.ts <directory> [output-file] [--just]");
+	process.exit(1);
 }
 
 console.error(`Scanning ${rootDir} for tools...`);
