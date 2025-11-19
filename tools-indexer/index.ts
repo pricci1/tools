@@ -1,7 +1,7 @@
+import { dirname, join } from "node:path";
 import { Glob } from "bun";
-import Handlebars from "handlebars";
 import matter from "gray-matter";
-import { join, relative, dirname } from "node:path";
+import Handlebars from "handlebars";
 
 const args = Bun.argv.slice(2);
 
@@ -24,8 +24,6 @@ if (flagIndex !== -1) {
 
 console.error(`Scanning ${rootDir} for tools...`);
 
-const glob = new Glob("**/README.md");
-
 interface Tool {
 	name: string;
 	purpose: string;
@@ -33,39 +31,40 @@ interface Tool {
 	path: string;
 }
 
-const tools: Tool[] = [];
+async function scanToolsDirectory(rootDir: string): Promise<Tool[]> {
+	const scannedTools: Tool[] = [];
+	const glob = new Glob("**/README.md");
 
-// Scan for README.md files
-for await (const file of glob.scan({ cwd: rootDir })) {
-	const fullPath = join(rootDir, file);
+	// Scan for README.md files
+	for await (const file of glob.scan({ cwd: rootDir })) {
+		const fullPath = join(rootDir, file);
 
-	if (file.includes("node_modules")) continue;
+		if (file.includes("node_modules")) continue;
 
-	try {
-		const fileContent = await Bun.file(fullPath).text();
-		const { data } = matter(fileContent);
+		try {
+			const fileContent = await Bun.file(fullPath).text();
+			const { data } = matter(fileContent);
 
-		if (data.name && data.purpose) {
-			const toolDir = dirname(file);
-			// If we are writing to a file, links should be relative to that file.
-			// If printing to stdout, links relative to cwd (which we assume is where we run it from?)
-			// Let's make links relative to the rootDir for now, or if outputFile is present, relative to that.
+			if (data.name && data.purpose) {
+				const toolDir = dirname(file);
+				const link = `./${toolDir}`;
 
-			// Assuming the index file will be placed in rootDir if not specified,
-			// or we just link to the relative path found by glob.
-			const link = `./${toolDir}`;
-
-			tools.push({
-				name: data.name,
-				purpose: data.purpose,
-				link: link,
-				path: file,
-			});
+				scannedTools.push({
+					name: data.name,
+					purpose: data.purpose,
+					link: link,
+					path: file,
+				});
+			}
+		} catch (error) {
+			console.error(`Error reading ${file}:`, error);
 		}
-	} catch (error) {
-		console.error(`Error reading ${file}:`, error);
 	}
+
+	return scannedTools;
 }
+
+const tools = await scanToolsDirectory(rootDir);
 
 tools.sort((a, b) => a.name.localeCompare(b.name));
 
