@@ -1,16 +1,16 @@
 {
-  "name": "tools-indexer",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "gray-matter": "^4.0.3",
-    "handlebars": "^4.7.8"
-  }
+	"name": "tools-indexer",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"gray-matter": "^4.0.3",
+		"handlebars": "^4.7.8"
+	}
 }
