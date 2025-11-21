@@ -17,6 +17,11 @@ interface HistoryEntry {
   deleted_at: number | null;
 }
 
+interface OperationOptions {
+  dryRun: boolean;
+  recursive: boolean;
+}
+
 function printUsage(): void {
   console.log(`
 Atuin History Mover - Move or copy shell history between directories
@@ -31,6 +36,7 @@ COMMANDS:
   count <dir>           Count history entries for a directory
 
 OPTIONS:
+  -r, --recursive      Also process entries in nested subdirectories
   --dry-run            Show what would be changed without making changes
   --db <path>          Path to Atuin database (overrides ATUIN_DB_PATH)
   --help, -h           Show this help message
@@ -39,17 +45,20 @@ EXAMPLES:
   # Move history from old to new project directory
   bun run src/index.ts move ~/projects/old-name ~/projects/new-name
 
+  # Move history including all nested subdirectories
+  bun run src/index.ts move ~/projects/old-name ~/projects/new-name -r
+
   # Copy history (keeps both)
   bun run src/index.ts copy ~/projects/template ~/projects/new-project
 
   # Preview changes without modifying
   bun run src/index.ts move ~/old ~/new --dry-run
 
-  # List recent commands from a directory
-  bun run src/index.ts list ~/projects/myapp 20
+  # List recent commands from a directory (recursive)
+  bun run src/index.ts list ~/projects/myapp 20 -r
 
-  # Count history entries
-  bun run src/index.ts count ~/projects/myapp
+  # Count history entries including subdirectories
+  bun run src/index.ts count ~/projects/myapp --recursive
 
 ENVIRONMENT:
   ATUIN_DB_PATH        Custom path to Atuin database
@@ -89,58 +98,123 @@ function moveHistory(
   db: Database,
   fromDir: string,
   toDir: string,
-  dryRun: boolean = false,
+  options: OperationOptions = { dryRun: false, recursive: false },
 ): number {
   const fromPath = normalizePath(fromDir);
   const toPath = normalizePath(toDir);
 
   console.log(`Moving history from: ${fromPath}`);
   console.log(`                 to: ${toPath}`);
-
-  const countQuery = db.query<{ count: number }, [string]>(
-    "SELECT COUNT(*) as count FROM history WHERE cwd = ? AND deleted_at IS NULL",
-  );
-  const { count } = countQuery.get(fromPath)!;
-
-  if (count === 0) {
-    console.log(`No history entries found for directory: ${fromPath}`);
-    return 0;
+  if (options.recursive) {
+    console.log(`Mode: Recursive (including nested directories)`);
   }
 
-  console.log(`Found ${count} history entries to move`);
+  // Query depends on recursive flag
+  let countQuery;
+  let entries: HistoryEntry[];
+  
+  if (options.recursive) {
+    // Match the exact directory and all subdirectories
+    countQuery = db.query<{ count: number }, [string, string]>(
+      "SELECT COUNT(*) as count FROM history WHERE (cwd = ? OR cwd LIKE ?) AND deleted_at IS NULL",
+    );
+    const { count } = countQuery.get(fromPath, fromPath + '/%')!
+    
+    if (count === 0) {
+      console.log(`No history entries found for directory: ${fromPath}`);
+      return 0;
+    }
+    
+    console.log(`Found ${count} history entries to move`);
+    
+    if (options.dryRun) {
+      console.log("DRY RUN: No changes will be made");
+      return count;
+    }
+    
+    // Get all matching entries to update their paths
+    const selectQuery = db.query<HistoryEntry, [string, string]>(
+      "SELECT * FROM history WHERE (cwd = ? OR cwd LIKE ?) AND deleted_at IS NULL",
+    );
+    entries = selectQuery.all(fromPath, fromPath + '/%');
+    
+    // Update each entry, preserving the subdirectory structure
+    const updateQuery = db.prepare(
+      "UPDATE history SET cwd = ? WHERE id = ?",
+    );
+    
+    let updated = 0;
+    for (const entry of entries) {
+      // Replace the fromPath prefix with toPath, preserving subdirectories
+      const newCwd = entry.cwd === fromPath 
+        ? toPath 
+        : toPath + entry.cwd.slice(fromPath.length);
+      updateQuery.run(newCwd, entry.id);
+      updated++;
+    }
+    
+    console.log(`Successfully moved ${updated} entries`);
+    return updated;
+  } else {
+    // Non-recursive: exact match only
+    countQuery = db.query<{ count: number }, [string]>(
+      "SELECT COUNT(*) as count FROM history WHERE cwd = ? AND deleted_at IS NULL",
+    );
+    const { count } = countQuery.get(fromPath)!;
 
-  if (dryRun) {
-    console.log("DRY RUN: No changes will be made");
-    return count;
+    if (count === 0) {
+      console.log(`No history entries found for directory: ${fromPath}`);
+      return 0;
+    }
+
+    console.log(`Found ${count} history entries to move`);
+
+    if (options.dryRun) {
+      console.log("DRY RUN: No changes will be made");
+      return count;
+    }
+
+    // Update the cwd for all matching entries
+    const updateQuery = db.query<void, [string, string]>(
+      "UPDATE history SET cwd = ? WHERE cwd = ? AND deleted_at IS NULL",
+    );
+    const result = updateQuery.run(toPath, fromPath);
+
+    console.log(`Successfully moved ${result.changes} entries`);
+    return result.changes;
   }
-
-  // Update the cwd for all matching entries
-  const updateQuery = db.query<void, [string, string]>(
-    "UPDATE history SET cwd = ? WHERE cwd = ? AND deleted_at IS NULL",
-  );
-  const result = updateQuery.run(toPath, fromPath);
-
-  console.log(`Successfully moved ${result.changes} entries`);
-  return result.changes;
 }
 
 function copyHistory(
   db: Database,
   fromDir: string,
   toDir: string,
-  dryRun: boolean = false,
+  options: OperationOptions = { dryRun: false, recursive: false },
 ): number {
   const fromPath = normalizePath(fromDir);
   const toPath = normalizePath(toDir);
 
   console.log(`Copying history from: ${fromPath}`);
   console.log(`                  to: ${toPath}`);
+  if (options.recursive) {
+    console.log(`Mode: Recursive (including nested directories)`);
+  }
 
   // Get all matching entries
-  const selectQuery = db.query<HistoryEntry, [string]>(
-    "SELECT * FROM history WHERE cwd = ? AND deleted_at IS NULL",
-  );
-  const entries = selectQuery.all(fromPath);
+  let selectQuery;
+  let entries: HistoryEntry[];
+  
+  if (options.recursive) {
+    selectQuery = db.query<HistoryEntry, [string, string]>(
+      "SELECT * FROM history WHERE (cwd = ? OR cwd LIKE ?) AND deleted_at IS NULL",
+    );
+    entries = selectQuery.all(fromPath, fromPath + '/%');
+  } else {
+    selectQuery = db.query<HistoryEntry, [string]>(
+      "SELECT * FROM history WHERE cwd = ? AND deleted_at IS NULL",
+    );
+    entries = selectQuery.all(fromPath);
+  }
 
   if (entries.length === 0) {
     console.log(`No history entries found for directory: ${fromPath}`);
@@ -149,7 +223,7 @@ function copyHistory(
 
   console.log(`Found ${entries.length} history entries to copy`);
 
-  if (dryRun) {
+  if (options.dryRun) {
     console.log("DRY RUN: No changes will be made");
     return entries.length;
   }
@@ -164,13 +238,19 @@ function copyHistory(
     try {
       // New UUID for the copied entry
       const newId = randomUUID();
+      
+      // Calculate new cwd, preserving subdirectory structure in recursive mode
+      const newCwd = options.recursive && entry.cwd !== fromPath
+        ? toPath + entry.cwd.slice(fromPath.length)
+        : toPath;
+      
       insertQuery.run(
         newId,
         entry.timestamp,
         entry.duration,
         entry.exit,
         entry.command,
-        toPath,
+        newCwd,
         entry.session,
         entry.hostname,
         entry.deleted_at,
@@ -185,18 +265,40 @@ function copyHistory(
   return copied;
 }
 
-function listHistory(db: Database, dir: string, limit: number = 10): void {
+function listHistory(
+  db: Database,
+  dir: string,
+  limit: number = 10,
+  recursive: boolean = false,
+): void {
   const dirPath = normalizePath(dir);
 
-  console.log(`Listing history for: ${dirPath}\n`);
+  console.log(`Listing history for: ${dirPath}`);
+  if (recursive) {
+    console.log(`Mode: Recursive (including nested directories)`);
+  }
+  console.log();
 
-  const query = db.query<HistoryEntry, [string, number]>(
-    `SELECT * FROM history
-     WHERE cwd = ? AND deleted_at IS NULL
-     ORDER BY timestamp DESC
-     LIMIT ?`,
-  );
-  const entries = query.all(dirPath, limit);
+  let query;
+  let entries: HistoryEntry[];
+  
+  if (recursive) {
+    query = db.query<HistoryEntry, [string, string, number]>(
+      `SELECT * FROM history
+       WHERE (cwd = ? OR cwd LIKE ?) AND deleted_at IS NULL
+       ORDER BY timestamp DESC
+       LIMIT ?`,
+    );
+    entries = query.all(dirPath, dirPath + '/%', limit);
+  } else {
+    query = db.query<HistoryEntry, [string, number]>(
+      `SELECT * FROM history
+       WHERE cwd = ? AND deleted_at IS NULL
+       ORDER BY timestamp DESC
+       LIMIT ?`,
+    );
+    entries = query.all(dirPath, limit);
+  }
 
   if (entries.length === 0) {
     console.log("No history entries found");
@@ -209,21 +311,37 @@ function listHistory(db: Database, dir: string, limit: number = 10): void {
     const date = new Date(Number(entry.timestamp) / 1_000_000); // Convert from nanoseconds
     console.log(`[${date.toISOString()}] ${entry.command}`);
     console.log(
-      `  Exit: ${entry.exit} | Duration: ${entry.duration}ns | Session: ${entry.session.slice(0, 8)}...`,
+      `  CWD: ${entry.cwd} | Exit: ${entry.exit} | Duration: ${entry.duration}ns | Session: ${entry.session.slice(0, 8)}...`,
     );
     console.log();
   }
 }
 
-function countHistory(db: Database, dir: string): void {
+function countHistory(
+  db: Database,
+  dir: string,
+  recursive: boolean = false,
+): void {
   const dirPath = normalizePath(dir);
 
-  const query = db.query<{ count: number }, [string]>(
-    "SELECT COUNT(*) as count FROM history WHERE cwd = ? AND deleted_at IS NULL",
-  );
-  const { count } = query.get(dirPath)!;
-
-  console.log(`History entries for ${dirPath}: ${count}`);
+  let query;
+  let count: number;
+  
+  if (recursive) {
+    query = db.query<{ count: number }, [string, string]>(
+      "SELECT COUNT(*) as count FROM history WHERE (cwd = ? OR cwd LIKE ?) AND deleted_at IS NULL",
+    );
+    const result = query.get(dirPath, dirPath + '/%')!;
+    count = result.count;
+    console.log(`History entries for ${dirPath} (recursive): ${count}`);
+  } else {
+    query = db.query<{ count: number }, [string]>(
+      "SELECT COUNT(*) as count FROM history WHERE cwd = ? AND deleted_at IS NULL",
+    );
+    const result = query.get(dirPath)!;
+    count = result.count;
+    console.log(`History entries for ${dirPath}: ${count}`);
+  }
 }
 
 async function main() {
@@ -236,12 +354,14 @@ async function main() {
 
   const command = args[0];
   const dryRun = args.includes("--dry-run");
+  const recursive = args.includes("-r") || args.includes("--recursive");
 
   // Handle custom database path
   let dbPath = getAtuinDbPath();
   const dbIndex = args.indexOf("--db");
-  if (dbIndex !== -1 && args[dbIndex + 1]) {
-    dbPath = resolve(args[dbIndex + 1]);
+  const dbArg = args[dbIndex + 1];
+  if (dbIndex !== -1 && dbArg) {
+    dbPath = resolve(dbArg);
   }
 
   if (!existsSync(dbPath)) {
@@ -267,7 +387,11 @@ async function main() {
         }
         const fromDir = args[1];
         const toDir = args[2];
-        moveHistory(db, fromDir, toDir, dryRun);
+        if (!fromDir || !toDir) {
+          console.error("Error: move requires <from> and <to> arguments");
+          process.exit(1);
+        }
+        moveHistory(db, fromDir, toDir, { dryRun, recursive });
         break;
       }
 
@@ -279,7 +403,11 @@ async function main() {
         }
         const fromDir = args[1];
         const toDir = args[2];
-        copyHistory(db, fromDir, toDir, dryRun);
+        if (!fromDir || !toDir) {
+          console.error("Error: copy requires <from> and <to> arguments");
+          process.exit(1);
+        }
+        copyHistory(db, fromDir, toDir, { dryRun, recursive });
         break;
       }
 
@@ -290,8 +418,12 @@ async function main() {
           process.exit(1);
         }
         const dir = args[1];
-        const limit = args[2] ? parseInt(args[2], 10) : 10;
-        listHistory(db, dir, limit);
+        if (!dir) {
+          console.error("Error: list requires <dir> argument");
+          process.exit(1);
+        }
+        const limit = args[2] && !args[2].startsWith('-') ? parseInt(args[2], 10) : 10;
+        listHistory(db, dir, limit, recursive);
         break;
       }
 
@@ -302,7 +434,11 @@ async function main() {
           process.exit(1);
         }
         const dir = args[1];
-        countHistory(db, dir);
+        if (!dir) {
+          console.error("Error: count requires <dir> argument");
+          process.exit(1);
+        }
+        countHistory(db, dir, recursive);
         break;
       }
 

@@ -15,6 +15,7 @@ COMMANDS:
   count <dir>           Count history entries for a directory
 
 OPTIONS:
+  -r, --recursive      Also process entries in nested subdirectories
   --dry-run            Show what would be changed without making changes
   --db <path>          Path to Atuin database (overrides ATUIN_DB_PATH)
   --help, -h           Show this help message
@@ -23,17 +24,20 @@ EXAMPLES:
   # Move history from old to new project directory
   bun run src/index.ts move ~/projects/old-name ~/projects/new-name
 
+  # Move history including all nested subdirectories
+  bun run src/index.ts move ~/projects/old-name ~/projects/new-name -r
+
   # Copy history (keeps both)
   bun run src/index.ts copy ~/projects/template ~/projects/new-project
 
   # Preview changes without modifying
   bun run src/index.ts move ~/old ~/new --dry-run
 
-  # List recent commands from a directory
-  bun run src/index.ts list ~/projects/myapp 20
+  # List recent commands from a directory (recursive)
+  bun run src/index.ts list ~/projects/myapp 20 -r
 
-  # Count history entries
-  bun run src/index.ts count ~/projects/myapp
+  # Count history entries including subdirectories
+  bun run src/index.ts count ~/projects/myapp --recursive
 
 ENVIRONMENT:
   ATUIN_DB_PATH        Custom path to Atuin database
