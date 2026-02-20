@@ -768,6 +768,13 @@
 
         connectedCallback() {
           this.renderShell();
+          this.store.addCellListener("players", null, "destinationPoints", () => {
+            this.renderPlayers();
+          });
+          this.store.addCellListener("players", null, "longestRoute", () => {
+            this.renderPlayers();
+          });
+
           this.addEventListener("name-change", (event) => {
             if (this.store.hasRow("players", event.detail.id)) {
               this.store.setCell("players", event.detail.id, "name", event.detail.name);
