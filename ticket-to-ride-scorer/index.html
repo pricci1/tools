@@ -747,7 +747,12 @@
         }
 
         connectedCallback() {
-          this.render();
+          if (!this._isInitialized) {
+            this.setupDOM();
+            this.setupListeners();
+            this._isInitialized = true;
+          }
+          if (this._player) this.render();
         }
 
         emit(name, detail) {
@@ -759,22 +764,13 @@
           );
         }
 
-        render() {
-          if (!this._player) return;
-
-          const p = this._player;
-          const routePts = calcRoutePoints(p.routes);
-          const routeCounts = [1, 2, 3, 4, 5, 6].reduce((counts, len) => {
-            counts[len] = p.routes.filter((routeLen) => routeLen === len).length;
-            return counts;
-          }, {});
-          const total = calcTotal(p);
+        setupDOM() {
           this.classList.add("player-card");
           this.innerHTML = `
             <div class="player-header">
-              <div class="player-color-dot" style="background:${p.color}"></div>
-              <input class="player-name-input" value="${escHtml(p.name)}" placeholder="Player name">
-              <span class="player-total">${total}</span>
+              <div class="player-color-dot"></div>
+              <input class="player-name-input" value="" placeholder="Player name">
+              <span class="player-total">0</span>
               <button class="btn-remove-player" type="button" title="Remove player">✕</button>
             </div>
 
@@ -788,8 +784,8 @@
                         <span class="route-len-btn">${len}</span>
                         <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
                         <div class="route-counter">
-                          <button class="route-adjust" type="button" data-route-len="${len}" data-route-delta="-1" ${routeCounts[len] === 0 ? "disabled" : ""}>-</button>
-                          <span class="route-count">${routeCounts[len]}</span>
+                          <button class="route-adjust" type="button" data-route-len="${len}" data-route-delta="-1" disabled>-</button>
+                          <span class="route-count" data-route-len="${len}">0</span>
                           <button class="route-adjust" type="button" data-route-len="${len}" data-route-delta="1">+</button>
                         </div>
                       </div>
@@ -805,63 +801,114 @@
               <div class="special-scores">
                 <div class="special-field">
                   <label>Destination Tickets (net)</label>
-                  <input type="number" class="special-input" value="${p.destinationPoints}" placeholder="0">
+                  <input type="number" class="special-input dest-input" value="0" placeholder="0">
                 </div>
                 <div class="special-field">
                   <label>Longest Route +10</label>
-                  <select class="special-input">
-                    <option value="false" ${!p.longestRoute ? "selected" : ""}>No</option>
-                    <option value="true" ${p.longestRoute ? "selected" : ""}>Yes (+10)</option>
+                  <select class="special-input longest-select">
+                    <option value="false">No</option>
+                    <option value="true">Yes (+10)</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            <div class="score-breakdown">
-              Routes: ${routePts} · Tickets: ${p.destinationPoints > 0 ? "+" : ""}${p.destinationPoints || 0} · Longest: ${p.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>
-            </div>
+            <div class="score-breakdown"></div>
           `;
 
-          this.querySelector(".player-name-input")?.addEventListener("input", (event) => {
+          this._colorDot = this.querySelector(".player-color-dot");
+          this._nameInput = this.querySelector(".player-name-input");
+          this._totalEl = this.querySelector(".player-total");
+          this._routesList = this.querySelector(".routes-list");
+          this._destInput = this.querySelector(".dest-input");
+          this._longestSelect = this.querySelector(".longest-select");
+          this._breakdownEl = this.querySelector(".score-breakdown");
+
+          this._routeRefs = {};
+          for (let len = 1; len <= 6; len++) {
+            this._routeRefs[len] = {
+              count: this.querySelector(`.route-count[data-route-len="${len}"]`),
+              minus: this.querySelector(`.route-adjust[data-route-len="${len}"][data-route-delta="-1"]`),
+            };
+          }
+        }
+
+        setupListeners() {
+          this._nameInput.addEventListener("input", (event) => {
             this.emit("name-change", {
-              id: p.id,
+              id: this._player.id,
               name: event.target.value,
             });
           });
 
-          this.querySelector(".btn-remove-player")?.addEventListener("click", () => {
-            this.emit("remove-player", { id: p.id });
+          this.querySelector(".btn-remove-player").addEventListener("click", () => {
+            this.emit("remove-player", { id: this._player.id });
           });
 
-          this.querySelectorAll("[data-route-delta]").forEach((button) => {
-            button.addEventListener("click", () => {
-              this.emit("route-count-change", {
-                id: p.id,
-                len: Number(button.dataset.routeLen),
-                delta: Number(button.dataset.routeDelta),
-              });
+          this.addEventListener("click", (e) => {
+            const btn = e.target.closest("[data-route-delta]");
+            if (!btn) return;
+            this.emit("route-count-change", {
+              id: this._player.id,
+              len: Number(btn.dataset.routeLen),
+              delta: Number(btn.dataset.routeDelta),
             });
           });
 
-          this.querySelector("input.special-input")?.addEventListener("input", (event) => {
+          this._destInput.addEventListener("input", (event) => {
             const destinationPoints = Number(event.target.value) || 0;
             this._player.destinationPoints = destinationPoints;
             this.updateScoreDisplay();
             this.emit("destination-change", {
-              id: p.id,
+              id: this._player.id,
               destinationPoints,
             });
           });
 
-          this.querySelector("select.special-input")?.addEventListener("change", (event) => {
+          this._longestSelect.addEventListener("change", (event) => {
             const longestRoute = event.target.value === "true";
             this._player.longestRoute = longestRoute;
             this.updateScoreDisplay();
             this.emit("longest-route-change", {
-              id: p.id,
+              id: this._player.id,
               longestRoute,
             });
           });
+        }
+
+        render() {
+          if (!this._player) return;
+
+          const p = this._player;
+          const routePts = calcRoutePoints(p.routes);
+          const total = calcTotal(p);
+          const destinationPoints = Number(p.destinationPoints || 0);
+
+          this._colorDot.style.background = p.color;
+
+          if (document.activeElement !== this._nameInput) {
+            this._nameInput.value = p.name;
+          }
+
+          this._totalEl.textContent = String(total);
+
+          for (let len = 1; len <= 6; len++) {
+            const count = p.routes.filter((r) => r === len).length;
+            const ref = this._routeRefs[len];
+            ref.count.textContent = String(count);
+            ref.minus.disabled = count === 0;
+          }
+
+          if (document.activeElement !== this._destInput) {
+            this._destInput.value = destinationPoints;
+          }
+
+          if (document.activeElement !== this._longestSelect) {
+            this._longestSelect.value = String(p.longestRoute);
+          }
+
+          this._breakdownEl.innerHTML =
+            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${p.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>`;
         }
 
         updateScoreDisplay() {
@@ -871,16 +918,9 @@
           const total = calcTotal(this._player);
           const destinationPoints = Number(this._player.destinationPoints || 0);
 
-          const totalEl = this.querySelector(".player-total");
-          if (totalEl) {
-            totalEl.textContent = String(total);
-          }
-
-          const breakdownEl = this.querySelector(".score-breakdown");
-          if (breakdownEl) {
-            breakdownEl.innerHTML =
-              `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>`;
-          }
+          this._totalEl.textContent = String(total);
+          this._breakdownEl.innerHTML =
+            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>`;
         }
       }
 
