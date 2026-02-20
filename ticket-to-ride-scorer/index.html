@@ -616,7 +616,7 @@
           const p = this._player;
           const routePts = calcRoutePoints(p.routes);
           const total = calcTotal(p);
-          this.className = "player-card";
+          this.classList.add("player-card");
           this.innerHTML = `
             <div class="player-header">
               <div class="player-color-dot" style="background:${p.color}"></div>
@@ -703,18 +703,43 @@
           });
 
           this.querySelector("input.special-input")?.addEventListener("input", (event) => {
+            const destinationPoints = Number(event.target.value) || 0;
+            this._player.destinationPoints = destinationPoints;
+            this.updateScoreDisplay();
             this.emit("destination-change", {
               id: p.id,
-              destinationPoints: Number(event.target.value) || 0,
+              destinationPoints,
             });
           });
 
           this.querySelector("select.special-input")?.addEventListener("change", (event) => {
+            const longestRoute = event.target.value === "true";
+            this._player.longestRoute = longestRoute;
+            this.updateScoreDisplay();
             this.emit("longest-route-change", {
               id: p.id,
-              longestRoute: event.target.value === "true",
+              longestRoute,
             });
           });
+        }
+
+        updateScoreDisplay() {
+          if (!this._player) return;
+
+          const routePts = calcRoutePoints(this._player.routes);
+          const total = calcTotal(this._player);
+          const destinationPoints = Number(this._player.destinationPoints || 0);
+
+          const totalEl = this.querySelector(".player-total");
+          if (totalEl) {
+            totalEl.textContent = String(total);
+          }
+
+          const breakdownEl = this.querySelector(".score-breakdown");
+          if (breakdownEl) {
+            breakdownEl.innerHTML =
+              `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>`;
+          }
         }
       }
 
@@ -768,13 +793,6 @@
 
         connectedCallback() {
           this.renderShell();
-          this.store.addCellListener("players", null, "destinationPoints", () => {
-            this.renderPlayers();
-          });
-          this.store.addCellListener("players", null, "longestRoute", () => {
-            this.renderPlayers();
-          });
-
           this.addEventListener("name-change", (event) => {
             if (this.store.hasRow("players", event.detail.id)) {
               this.store.setCell("players", event.detail.id, "name", event.detail.name);
@@ -807,7 +825,7 @@
                 });
                 this.store.setValue("nextRouteId", Number(routeId) + 1);
               });
-              this.renderPlayers();
+              this.refreshPlayerCard(event.detail.id);
             }
           });
 
@@ -816,7 +834,7 @@
             const routeToRemove = playerRoutes[event.detail.index];
             if (routeToRemove) {
               this.store.delRow("routes", routeToRemove.id);
-              this.renderPlayers();
+              this.refreshPlayerCard(event.detail.id);
             }
           });
 
@@ -987,6 +1005,27 @@
           this.renderPlayers();
         }
 
+        refreshPlayerCard(playerId) {
+          const player = this.getPlayers().find((entry) => String(entry.id) === String(playerId));
+          if (!player) {
+            this.renderPlayers();
+            return;
+          }
+
+          const card = Array.from(this.querySelectorAll("ttr-player-card")).find(
+            (entry) => entry.dataset.playerId === String(playerId),
+          );
+
+          if (!card) {
+            this.renderPlayers();
+            return;
+          }
+
+          card.player = player;
+          card.dataset.playerId = player.id;
+          this.updateScoreboard();
+        }
+
         resetAll() {
           if (confirm("Reset all scores? Player names will be kept.")) {
             this.store.transaction(() => {
@@ -1022,6 +1061,7 @@
           players.forEach((player) => {
             const card = document.createElement("ttr-player-card");
             card.player = player;
+            card.dataset.playerId = player.id;
             grid.appendChild(card);
           });
 
