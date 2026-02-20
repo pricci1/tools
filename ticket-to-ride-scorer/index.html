@@ -739,7 +739,7 @@
       class TTRPlayerCard extends HTMLElement {
         set player(data) {
           this._player = data;
-          this.render();
+          if (this._colorDot) this.render();
         }
 
         get player() {
@@ -925,9 +925,19 @@
       }
 
       class TTRScoreboard extends HTMLElement {
+        connectedCallback() {
+          this.setupDOM();
+        }
+
+        setupDOM() {
+          this.className = "scoreboard";
+          this.innerHTML = `<h2>🏆 Leaderboard</h2><div class="scoreboard-rows"></div>`;
+          this._rowsContainer = this.querySelector(".scoreboard-rows");
+        }
+
         set players(data) {
           this._players = data;
-          this.render();
+          if (this._rowsContainer) this.render();
         }
 
         render() {
@@ -938,26 +948,43 @@
           }
 
           this.style.display = "block";
+          if (!this._rowsContainer) this.setupDOM();
+
           const sorted = [...players].sort((a, b) => calcTotal(b) - calcTotal(a));
-          this.className = "scoreboard";
-          this.innerHTML = `
-            <h2>🏆 Leaderboard</h2>
-            <div>
-              ${sorted
-                .map(
-                  (p, i) => `
-                    <div class="scoreboard-row rank-${i + 1}">
-                      <span class="rank">${i + 1}</span>
-                      <div class="player-color-dot" style="background:${p.color}"></div>
-                      <span class="sb-name">${escHtml(p.name)}</span>
-                      <span class="sb-details">${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}</span>
-                      <span class="sb-score">${calcTotal(p)}</span>
-                    </div>
-                  `,
-                )
-                .join("")}
-            </div>
-          `;
+          const existing = new Map();
+          for (const row of this._rowsContainer.children) {
+            existing.set(row.dataset.playerId, row);
+          }
+
+          const fragment = document.createDocumentFragment();
+          sorted.forEach((p, i) => {
+            const id = p.name;
+            let row = existing.get(id);
+            if (!row) {
+              row = document.createElement("div");
+              row.dataset.playerId = id;
+              row._rankEl = document.createElement("span");
+              row._rankEl.className = "rank";
+              row._dotEl = document.createElement("div");
+              row._dotEl.className = "player-color-dot";
+              row._nameEl = document.createElement("span");
+              row._nameEl.className = "sb-name";
+              row._detailsEl = document.createElement("span");
+              row._detailsEl.className = "sb-details";
+              row._scoreEl = document.createElement("span");
+              row._scoreEl.className = "sb-score";
+              row.append(row._rankEl, row._dotEl, row._nameEl, row._detailsEl, row._scoreEl);
+            }
+            row.className = `scoreboard-row rank-${i + 1}`;
+            row._rankEl.textContent = i + 1;
+            row._dotEl.style.background = p.color;
+            row._nameEl.textContent = p.name;
+            row._detailsEl.textContent = `${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}`;
+            row._scoreEl.textContent = calcTotal(p);
+            fragment.appendChild(row);
+          });
+
+          this._rowsContainer.replaceChildren(fragment);
         }
       }
 
