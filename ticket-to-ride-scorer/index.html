@@ -728,13 +728,6 @@
         );
       }
 
-      function escHtml(s) {
-        return s
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-      }
 
       class TTRPlayerCard extends HTMLElement {
         set player(data) {
@@ -1003,13 +996,15 @@
         }
 
         connectedCallback() {
+          this._ac = new AbortController();
+          const opts = { signal: this._ac.signal };
           this.renderShell();
           this.addEventListener("name-change", (event) => {
             if (this.store.hasRow("players", event.detail.id)) {
               this.store.setCell("players", event.detail.id, "name", event.detail.name);
               this.updateScoreboard();
             }
-          });
+          }, opts);
 
           this.addEventListener("remove-player", (event) => {
             this.store.transaction(() => {
@@ -1022,7 +1017,7 @@
               });
             });
             this.renderPlayers();
-          });
+          }, opts);
 
           this.addEventListener("route-count-change", (event) => {
             if (!this.store.hasRow("players", event.detail.id)) {
@@ -1053,7 +1048,7 @@
                 this.refreshPlayerCard(event.detail.id);
               }
             }
-          });
+          }, opts);
 
           this.addEventListener("destination-change", (event) => {
             if (this.store.hasRow("players", event.detail.id)) {
@@ -1065,7 +1060,7 @@
               );
               this.updateScoreboard();
             }
-          });
+          }, opts);
 
           this.addEventListener("longest-route-change", (event) => {
             if (this.store.hasRow("players", event.detail.id)) {
@@ -1077,12 +1072,13 @@
               );
               this.updateScoreboard();
             }
-          });
+          }, opts);
 
           this.initStorePersistence();
         }
 
         disconnectedCallback() {
+          this._ac?.abort();
           if (this.persister) {
             this.persister.destroy();
             this.persister = null;
@@ -1165,11 +1161,11 @@
 
           this.querySelector("#addPlayerBtn")?.addEventListener("click", () => {
             this.addPlayer();
-          });
+          }, { signal: this._ac.signal });
 
           this.querySelector("#resetBtn")?.addEventListener("click", () => {
             this.resetAll();
-          });
+          }, { signal: this._ac.signal });
         }
 
         getPlayers() {
@@ -1274,13 +1270,21 @@
             return;
           }
 
-          grid.innerHTML = "";
-          players.forEach((player) => {
-            const card = document.createElement("ttr-player-card");
+          const existing = new Map(
+            Array.from(grid.querySelectorAll("ttr-player-card")).map((el) => [el.dataset.playerId, el]),
+          );
+
+          const fragment = document.createDocumentFragment();
+          for (const player of players) {
+            let card = existing.get(player.id);
+            if (!card) {
+              card = document.createElement("ttr-player-card");
+              card.dataset.playerId = player.id;
+            }
             card.player = player;
-            card.dataset.playerId = player.id;
-            grid.appendChild(card);
-          });
+            fragment.appendChild(card);
+          }
+          grid.replaceChildren(fragment);
 
           this.updateScoreboard();
         }
