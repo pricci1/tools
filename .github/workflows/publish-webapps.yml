@@ -1,0 +1,130 @@
+name: Publish Webapps to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build publish directory from webapp folders
+        run: |
+          set -euo pipefail
+
+          out_dir="dist"
+          rm -rf "${out_dir}"
+          mkdir -p "${out_dir}"
+          links_file="${out_dir}/.links.tmp"
+          : > "${links_file}"
+
+          published_count=0
+
+          for dir in */ ; do
+            dir="${dir%/}"
+            readme="${dir}/README.md"
+
+            if [ ! -f "${readme}" ]; then
+              continue
+            fi
+
+            type_value="$(awk '
+              BEGIN { in_frontmatter = 0 }
+              /^---[[:space:]]*$/ {
+                if (in_frontmatter == 0) {
+                  in_frontmatter = 1
+                  next
+                }
+
+                if (in_frontmatter == 1) {
+                  exit
+                }
+              }
+              in_frontmatter == 1 {
+                if ($0 ~ /^type:[[:space:]]*/) {
+                  value = $0
+                  sub(/^type:[[:space:]]*/, "", value)
+                  gsub(/[[:space:]]+$/, "", value)
+                  print value
+                  exit
+                }
+              }
+            ' "${readme}")"
+
+            if [ "${type_value}" != "webapp" ]; then
+              continue
+            fi
+
+            echo "Publishing ${dir}/"
+            cp -R "${dir}" "${out_dir}/${dir}"
+            printf '<li><a href="./%s/">%s</a></li>\n' "${dir}" "${dir}" >> "${links_file}"
+            published_count=$((published_count + 1))
+          done
+
+          if [ "${published_count}" -eq 0 ]; then
+            echo "No webapps were detected; publishing a placeholder page."
+          fi
+
+          {
+            cat <<'EOF'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>Published Webapps</title>
+            </head>
+            <body>
+              <h1>Published Webapps</h1>
+          EOF
+
+            if [ "${published_count}" -eq 0 ]; then
+              cat <<'EOF'
+              <p>No folders with <code>README.md</code> frontmatter <code>type: webapp</code> were found.</p>
+          EOF
+            else
+              cat <<'EOF'
+              <ul>
+          EOF
+              cat "${links_file}"
+              cat <<'EOF'
+              </ul>
+          EOF
+            fi
+
+            cat <<'EOF'
+            </body>
+          </html>
+          EOF
+          } > "${out_dir}/index.html"
+
+          rm -f "${links_file}"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
