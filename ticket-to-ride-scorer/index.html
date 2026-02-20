@@ -497,54 +497,7 @@
     </style>
   </head>
   <body>
-    <header>
-      <h1>Ticket to Ride</h1>
-      <p>Score Tracker — Original Edition</p>
-    </header>
-
-    <div class="controls">
-      <button class="btn btn-primary" onclick="addPlayer()">
-        + Add Player
-      </button>
-      <button class="btn btn-ghost" onclick="resetAll()">Reset All</button>
-    </div>
-
-    <main>
-      <div class="players-grid" id="playersGrid">
-        <div class="empty-state" id="emptyState">
-          Add players to begin tracking scores
-        </div>
-      </div>
-
-      <div class="scoreboard" id="scoreboard" style="display: none">
-        <h2>🏆 Leaderboard</h2>
-        <div id="scoreboardRows"></div>
-      </div>
-
-      <div class="points-ref">
-        <h3>Route Length → Points Reference</h3>
-        <div class="ref-table">
-          <div class="ref-item">
-            <span class="ref-len">1</span><span class="ref-pts">= 1 pt</span>
-          </div>
-          <div class="ref-item">
-            <span class="ref-len">2</span><span class="ref-pts">= 2 pts</span>
-          </div>
-          <div class="ref-item">
-            <span class="ref-len">3</span><span class="ref-pts">= 4 pts</span>
-          </div>
-          <div class="ref-item">
-            <span class="ref-len">4</span><span class="ref-pts">= 7 pts</span>
-          </div>
-          <div class="ref-item">
-            <span class="ref-len">5</span><span class="ref-pts">= 10 pts</span>
-          </div>
-          <div class="ref-item">
-            <span class="ref-len">6</span><span class="ref-pts">= 15 pts</span>
-          </div>
-        </div>
-      </div>
-    </main>
+    <ttr-score-app></ttr-score-app>
 
     <script>
       const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
@@ -559,44 +512,6 @@
         "#2c3e50",
       ];
 
-      let players = [];
-      let nextId = 1;
-
-      function addPlayer() {
-        const id = nextId++;
-        const colorIndex = players.length % PLAYER_COLORS.length;
-        players.push({
-          id,
-          name: `Player ${players.length + 1}`,
-          color: PLAYER_COLORS[colorIndex],
-          routes: [],
-          destinationPoints: 0,
-          longestRoute: false,
-        });
-        render();
-      }
-
-      function removePlayer(id) {
-        players = players.filter((p) => p.id !== id);
-        render();
-      }
-
-      function addRoute(id, len) {
-        const p = players.find((p) => p.id === id);
-        if (p) {
-          p.routes.push(len);
-          render();
-        }
-      }
-
-      function removeRoute(id, idx) {
-        const p = players.find((p) => p.id === id);
-        if (p) {
-          p.routes.splice(idx, 1);
-          render();
-        }
-      }
-
       function calcRoutePoints(routes) {
         return routes.reduce((sum, len) => sum + (ROUTE_POINTS[len] || 0), 0);
       }
@@ -609,139 +524,6 @@
         );
       }
 
-      function updateName(id, val) {
-        const p = players.find((p) => p.id === id);
-        if (p) p.name = val;
-        updateScoreboard();
-      }
-
-      function updateDest(id, val) {
-        const p = players.find((p) => p.id === id);
-        if (p) {
-          p.destinationPoints = Number(val) || 0;
-          updateScoreboard();
-        }
-      }
-
-      function toggleLongest(id, val) {
-        const p = players.find((p) => p.id === id);
-        if (p) {
-          p.longestRoute = val;
-          updateScoreboard();
-        }
-      }
-
-      function resetAll() {
-        if (confirm("Reset all scores? Player names will be kept.")) {
-          players.forEach((p) => {
-            p.routes = [];
-            p.destinationPoints = 0;
-            p.longestRoute = false;
-          });
-          render();
-        }
-      }
-
-      function render() {
-        const grid = document.getElementById("playersGrid");
-        const empty = document.getElementById("emptyState");
-
-        if (players.length === 0) {
-          grid.innerHTML = "";
-          grid.appendChild(empty);
-          document.getElementById("scoreboard").style.display = "none";
-          return;
-        }
-
-        grid.innerHTML = "";
-        players.forEach((p) => {
-          const routePts = calcRoutePoints(p.routes);
-          const total = calcTotal(p);
-          const div = document.createElement("div");
-          div.className = "player-card";
-          div.innerHTML = `
-      <div class="player-header">
-        <div class="player-color-dot" style="background:${p.color}"></div>
-        <input class="player-name-input" value="${escHtml(p.name)}"
-          oninput="updateName(${p.id}, this.value)" placeholder="Player name">
-        <span class="player-total">${total}</span>
-        <button class="btn-remove-player" onclick="removePlayer(${p.id})" title="Remove player">✕</button>
-      </div>
-
-      <div class="score-section">
-        <div class="score-section-title">Routes Claimed</div>
-        <div class="routes-list" id="routes-${p.id}">
-          ${p.routes
-            .map(
-              (len, idx) => `
-            <div class="route-row">
-              <span class="route-len-btn">${len}</span>
-              <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
-              <button class="btn-remove-route" onclick="removeRoute(${p.id}, ${idx})">✕</button>
-            </div>
-          `,
-            )
-            .join("")}
-        </div>
-        <div class="add-route-row">
-          ${[1, 2, 3, 4, 5, 6].map((l) => `<span class="len-chip" onclick="addRoute(${p.id}, ${l})">${l}</span>`).join("")}
-        </div>
-      </div>
-
-      <hr class="section-divider">
-
-      <div class="score-section">
-        <div class="special-scores">
-          <div class="special-field">
-            <label>Destination Tickets (net)</label>
-            <input type="number" class="special-input" value="${p.destinationPoints}"
-              oninput="updateDest(${p.id}, this.value)" placeholder="0">
-          </div>
-          <div class="special-field">
-            <label>Longest Route +10</label>
-            <select class="special-input" onchange="toggleLongest(${p.id}, this.value === 'true')">
-              <option value="false" ${!p.longestRoute ? "selected" : ""}>No</option>
-              <option value="true" ${p.longestRoute ? "selected" : ""}>Yes (+10)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="score-breakdown">
-        Routes: ${routePts} · Tickets: ${p.destinationPoints > 0 ? "+" : ""}${p.destinationPoints || 0} · Longest: ${p.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>
-      </div>
-    `;
-          grid.appendChild(div);
-        });
-
-        updateScoreboard();
-      }
-
-      function updateScoreboard() {
-        const sb = document.getElementById("scoreboard");
-        const rows = document.getElementById("scoreboardRows");
-        if (players.length === 0) {
-          sb.style.display = "none";
-          return;
-        }
-        sb.style.display = "block";
-
-        const sorted = [...players].sort((a, b) => calcTotal(b) - calcTotal(a));
-        rows.innerHTML = sorted
-          .map(
-            (p, i) => `
-    <div class="scoreboard-row rank-${i + 1}">
-      <span class="rank">${i + 1}</span>
-      <div class="player-color-dot" style="background:${p.color}"></div>
-      <span class="sb-name">${escHtml(p.name)}</span>
-      <span class="sb-details">${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}</span>
-      <span class="sb-score">${calcTotal(p)}</span>
-    </div>
-  `,
-          )
-          .join("");
-      }
-
       function escHtml(s) {
         return s
           .replace(/&/g, "&amp;")
@@ -750,9 +532,344 @@
           .replace(/"/g, "&quot;");
       }
 
-      // Start with 2 players
-      addPlayer();
-      addPlayer();
+      class TTRPlayerCard extends HTMLElement {
+        set player(data) {
+          this._player = data;
+          this.render();
+        }
+
+        get player() {
+          return this._player;
+        }
+
+        connectedCallback() {
+          this.render();
+        }
+
+        emit(name, detail) {
+          this.dispatchEvent(
+            new CustomEvent(name, {
+              bubbles: true,
+              detail,
+            }),
+          );
+        }
+
+        render() {
+          if (!this._player) return;
+
+          const p = this._player;
+          const routePts = calcRoutePoints(p.routes);
+          const total = calcTotal(p);
+          this.className = "player-card";
+          this.innerHTML = `
+            <div class="player-header">
+              <div class="player-color-dot" style="background:${p.color}"></div>
+              <input class="player-name-input" value="${escHtml(p.name)}" placeholder="Player name">
+              <span class="player-total">${total}</span>
+              <button class="btn-remove-player" type="button" title="Remove player">✕</button>
+            </div>
+
+            <div class="score-section">
+              <div class="score-section-title">Routes Claimed</div>
+              <div class="routes-list">
+                ${p.routes
+                  .map(
+                    (len, idx) => `
+                      <div class="route-row">
+                        <span class="route-len-btn">${len}</span>
+                        <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
+                        <button class="btn-remove-route" type="button" data-route-index="${idx}">✕</button>
+                      </div>
+                    `,
+                  )
+                  .join("")}
+              </div>
+              <div class="add-route-row">
+                ${[1, 2, 3, 4, 5, 6]
+                  .map(
+                    (len) =>
+                      `<button class="len-chip" type="button" data-route-len="${len}">${len}</button>`,
+                  )
+                  .join("")}
+              </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <div class="score-section">
+              <div class="special-scores">
+                <div class="special-field">
+                  <label>Destination Tickets (net)</label>
+                  <input type="number" class="special-input" value="${p.destinationPoints}" placeholder="0">
+                </div>
+                <div class="special-field">
+                  <label>Longest Route +10</label>
+                  <select class="special-input">
+                    <option value="false" ${!p.longestRoute ? "selected" : ""}>No</option>
+                    <option value="true" ${p.longestRoute ? "selected" : ""}>Yes (+10)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="score-breakdown">
+              Routes: ${routePts} · Tickets: ${p.destinationPoints > 0 ? "+" : ""}${p.destinationPoints || 0} · Longest: ${p.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>
+            </div>
+          `;
+
+          this.querySelector(".player-name-input")?.addEventListener("input", (event) => {
+            this.emit("name-change", {
+              id: p.id,
+              name: event.target.value,
+            });
+          });
+
+          this.querySelector(".btn-remove-player")?.addEventListener("click", () => {
+            this.emit("remove-player", { id: p.id });
+          });
+
+          this.querySelectorAll("[data-route-len]").forEach((button) => {
+            button.addEventListener("click", () => {
+              this.emit("add-route", {
+                id: p.id,
+                len: Number(button.dataset.routeLen),
+              });
+            });
+          });
+
+          this.querySelectorAll("[data-route-index]").forEach((button) => {
+            button.addEventListener("click", () => {
+              this.emit("remove-route", {
+                id: p.id,
+                index: Number(button.dataset.routeIndex),
+              });
+            });
+          });
+
+          this.querySelector("input.special-input")?.addEventListener("input", (event) => {
+            this.emit("destination-change", {
+              id: p.id,
+              destinationPoints: Number(event.target.value) || 0,
+            });
+          });
+
+          this.querySelector("select.special-input")?.addEventListener("change", (event) => {
+            this.emit("longest-route-change", {
+              id: p.id,
+              longestRoute: event.target.value === "true",
+            });
+          });
+        }
+      }
+
+      class TTRScoreboard extends HTMLElement {
+        set players(data) {
+          this._players = data;
+          this.render();
+        }
+
+        render() {
+          const players = this._players || [];
+          if (players.length === 0) {
+            this.style.display = "none";
+            return;
+          }
+
+          this.style.display = "block";
+          const sorted = [...players].sort((a, b) => calcTotal(b) - calcTotal(a));
+          this.className = "scoreboard";
+          this.innerHTML = `
+            <h2>🏆 Leaderboard</h2>
+            <div>
+              ${sorted
+                .map(
+                  (p, i) => `
+                    <div class="scoreboard-row rank-${i + 1}">
+                      <span class="rank">${i + 1}</span>
+                      <div class="player-color-dot" style="background:${p.color}"></div>
+                      <span class="sb-name">${escHtml(p.name)}</span>
+                      <span class="sb-details">${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}</span>
+                      <span class="sb-score">${calcTotal(p)}</span>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </div>
+          `;
+        }
+      }
+
+      class TTRScoreApp extends HTMLElement {
+        constructor() {
+          super();
+          this.players = [];
+          this.nextId = 1;
+        }
+
+        connectedCallback() {
+          this.renderShell();
+          this.addEventListener("name-change", (event) => {
+            const player = this.findPlayer(event.detail.id);
+            if (player) {
+              player.name = event.detail.name;
+              this.updateScoreboard();
+            }
+          });
+
+          this.addEventListener("remove-player", (event) => {
+            this.players = this.players.filter((p) => p.id !== event.detail.id);
+            this.renderPlayers();
+          });
+
+          this.addEventListener("add-route", (event) => {
+            const player = this.findPlayer(event.detail.id);
+            if (player) {
+              player.routes.push(event.detail.len);
+              this.renderPlayers();
+            }
+          });
+
+          this.addEventListener("remove-route", (event) => {
+            const player = this.findPlayer(event.detail.id);
+            if (player) {
+              player.routes.splice(event.detail.index, 1);
+              this.renderPlayers();
+            }
+          });
+
+          this.addEventListener("destination-change", (event) => {
+            const player = this.findPlayer(event.detail.id);
+            if (player) {
+              player.destinationPoints = event.detail.destinationPoints;
+              this.updateScoreboard();
+            }
+          });
+
+          this.addEventListener("longest-route-change", (event) => {
+            const player = this.findPlayer(event.detail.id);
+            if (player) {
+              player.longestRoute = event.detail.longestRoute;
+              this.updateScoreboard();
+            }
+          });
+
+          this.addPlayer();
+          this.addPlayer();
+        }
+
+        renderShell() {
+          this.innerHTML = `
+            <header>
+              <h1>Ticket to Ride</h1>
+              <p>Score Tracker — Original Edition</p>
+            </header>
+
+            <div class="controls">
+              <button class="btn btn-primary" type="button" id="addPlayerBtn">+ Add Player</button>
+              <button class="btn btn-ghost" type="button" id="resetBtn">Reset All</button>
+            </div>
+
+            <main>
+              <div class="players-grid" id="playersGrid"></div>
+              <ttr-scoreboard id="scoreboard"></ttr-scoreboard>
+
+              <div class="points-ref">
+                <h3>Route Length → Points Reference</h3>
+                <div class="ref-table">
+                  <div class="ref-item">
+                    <span class="ref-len">1</span><span class="ref-pts">= 1 pt</span>
+                  </div>
+                  <div class="ref-item">
+                    <span class="ref-len">2</span><span class="ref-pts">= 2 pts</span>
+                  </div>
+                  <div class="ref-item">
+                    <span class="ref-len">3</span><span class="ref-pts">= 4 pts</span>
+                  </div>
+                  <div class="ref-item">
+                    <span class="ref-len">4</span><span class="ref-pts">= 7 pts</span>
+                  </div>
+                  <div class="ref-item">
+                    <span class="ref-len">5</span><span class="ref-pts">= 10 pts</span>
+                  </div>
+                  <div class="ref-item">
+                    <span class="ref-len">6</span><span class="ref-pts">= 15 pts</span>
+                  </div>
+                </div>
+              </div>
+            </main>
+          `;
+
+          this.querySelector("#addPlayerBtn")?.addEventListener("click", () => {
+            this.addPlayer();
+          });
+
+          this.querySelector("#resetBtn")?.addEventListener("click", () => {
+            this.resetAll();
+          });
+        }
+
+        findPlayer(id) {
+          return this.players.find((p) => p.id === id);
+        }
+
+        addPlayer() {
+          const id = this.nextId++;
+          const colorIndex = this.players.length % PLAYER_COLORS.length;
+          this.players.push({
+            id,
+            name: `Player ${this.players.length + 1}`,
+            color: PLAYER_COLORS[colorIndex],
+            routes: [],
+            destinationPoints: 0,
+            longestRoute: false,
+          });
+          this.renderPlayers();
+        }
+
+        resetAll() {
+          if (confirm("Reset all scores? Player names will be kept.")) {
+            this.players.forEach((p) => {
+              p.routes = [];
+              p.destinationPoints = 0;
+              p.longestRoute = false;
+            });
+            this.renderPlayers();
+          }
+        }
+
+        renderPlayers() {
+          const grid = this.querySelector("#playersGrid");
+          if (!grid) return;
+
+          if (this.players.length === 0) {
+            grid.innerHTML =
+              '<div class="empty-state">Add players to begin tracking scores</div>';
+            this.updateScoreboard();
+            return;
+          }
+
+          grid.innerHTML = "";
+          this.players.forEach((player) => {
+            const card = document.createElement("ttr-player-card");
+            card.player = player;
+            grid.appendChild(card);
+          });
+
+          this.updateScoreboard();
+        }
+
+        updateScoreboard() {
+          const scoreboard = this.querySelector("#scoreboard");
+          if (scoreboard) {
+            scoreboard.players = this.players;
+          }
+        }
+      }
+
+      customElements.define("ttr-player-card", TTRPlayerCard);
+      customElements.define("ttr-scoreboard", TTRScoreboard);
+      customElements.define("ttr-score-app", TTRScoreApp);
     </script>
   </body>
 </html>
