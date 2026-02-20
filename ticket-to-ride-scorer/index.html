@@ -261,17 +261,12 @@
         font-family: "Playfair Display", serif;
         font-weight: 700;
         font-size: 0.85rem;
-        cursor: pointer;
+        cursor: default;
         transition: all 0.12s;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-      }
-      .route-len-btn:hover {
-        background: var(--gold);
-        border-color: var(--gold);
-        color: var(--dark);
       }
 
       .route-pts {
@@ -286,42 +281,41 @@
         font-style: normal;
       }
 
-      .btn-remove-route {
-        background: none;
-        border: none;
-        color: var(--border);
-        cursor: pointer;
-        font-size: 0.95rem;
-        padding: 2px;
-        line-height: 1;
-        transition: color 0.15s;
-      }
-      .btn-remove-route:hover {
-        color: var(--rust);
+      .route-counter {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
       }
 
-      .add-route-row {
-        display: flex;
-        gap: 4px;
-        flex-wrap: wrap;
-        margin-top: 6px;
+      .route-count {
+        min-width: 2ch;
+        text-align: center;
+        font-family: "Playfair Display", serif;
+        font-size: 1rem;
+        color: var(--dark);
       }
 
-      .len-chip {
-        font-family: "Crimson Pro", serif;
-        font-size: 0.85rem;
-        padding: 3px 10px;
+      .route-adjust {
+        width: 22px;
+        height: 22px;
         border: 1px solid var(--border);
-        border-radius: 20px;
+        border-radius: 4px;
         background: var(--cream);
-        cursor: pointer;
-        transition: all 0.12s;
         color: var(--brown);
+        cursor: pointer;
+        line-height: 1;
+        font-size: 1rem;
       }
-      .len-chip:hover {
+
+      .route-adjust:hover {
         background: var(--gold);
         border-color: var(--gold);
         color: var(--dark);
+      }
+
+      .route-adjust:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
       }
 
       /* Special scores */
@@ -615,6 +609,10 @@
 
           const p = this._player;
           const routePts = calcRoutePoints(p.routes);
+          const routeCounts = [1, 2, 3, 4, 5, 6].reduce((counts, len) => {
+            counts[len] = p.routes.filter((routeLen) => routeLen === len).length;
+            return counts;
+          }, {});
           const total = calcTotal(p);
           this.classList.add("player-card");
           this.innerHTML = `
@@ -628,23 +626,19 @@
             <div class="score-section">
               <div class="score-section-title">Routes Claimed</div>
               <div class="routes-list">
-                ${p.routes
+                ${[1, 2, 3, 4, 5, 6]
                   .map(
-                    (len, idx) => `
+                    (len) => `
                       <div class="route-row">
                         <span class="route-len-btn">${len}</span>
                         <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
-                        <button class="btn-remove-route" type="button" data-route-index="${idx}">✕</button>
+                        <div class="route-counter">
+                          <button class="route-adjust" type="button" data-route-len="${len}" data-route-delta="-1" ${routeCounts[len] === 0 ? "disabled" : ""}>-</button>
+                          <span class="route-count">${routeCounts[len]}</span>
+                          <button class="route-adjust" type="button" data-route-len="${len}" data-route-delta="1">+</button>
+                        </div>
                       </div>
                     `,
-                  )
-                  .join("")}
-              </div>
-              <div class="add-route-row">
-                ${[1, 2, 3, 4, 5, 6]
-                  .map(
-                    (len) =>
-                      `<button class="len-chip" type="button" data-route-len="${len}">${len}</button>`,
                   )
                   .join("")}
               </div>
@@ -684,20 +678,12 @@
             this.emit("remove-player", { id: p.id });
           });
 
-          this.querySelectorAll("[data-route-len]").forEach((button) => {
+          this.querySelectorAll("[data-route-delta]").forEach((button) => {
             button.addEventListener("click", () => {
-              this.emit("add-route", {
+              this.emit("route-count-change", {
                 id: p.id,
                 len: Number(button.dataset.routeLen),
-              });
-            });
-          });
-
-          this.querySelectorAll("[data-route-index]").forEach((button) => {
-            button.addEventListener("click", () => {
-              this.emit("remove-route", {
-                id: p.id,
-                index: Number(button.dataset.routeIndex),
+                delta: Number(button.dataset.routeDelta),
               });
             });
           });
@@ -813,8 +799,12 @@
             this.renderPlayers();
           });
 
-          this.addEventListener("add-route", (event) => {
-            if (this.store.hasRow("players", event.detail.id)) {
+          this.addEventListener("route-count-change", (event) => {
+            if (!this.store.hasRow("players", event.detail.id)) {
+              return;
+            }
+
+            if (event.detail.delta > 0) {
               const routeId = String(this.store.getValue("nextRouteId") || 1);
               const existingRoutes = this.getRoutesForPlayer(event.detail.id);
               this.store.transaction(() => {
@@ -826,15 +816,17 @@
                 this.store.setValue("nextRouteId", Number(routeId) + 1);
               });
               this.refreshPlayerCard(event.detail.id);
+              return;
             }
-          });
 
-          this.addEventListener("remove-route", (event) => {
-            const playerRoutes = this.getRoutesForPlayer(event.detail.id);
-            const routeToRemove = playerRoutes[event.detail.index];
-            if (routeToRemove) {
-              this.store.delRow("routes", routeToRemove.id);
-              this.refreshPlayerCard(event.detail.id);
+            if (event.detail.delta < 0) {
+              const routeToRemove = this.getRoutesForPlayer(event.detail.id).find(
+                (route) => route.len === event.detail.len,
+              );
+              if (routeToRemove) {
+                this.store.delRow("routes", routeToRemove.id);
+                this.refreshPlayerCard(event.detail.id);
+              }
             }
           });
 
