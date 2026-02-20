@@ -655,6 +655,24 @@
         "#2c3e50",
       ];
       const URL_STATE_KEY = "s";
+      const VALUES_SCHEMA = {
+        nextPlayerId: { type: "number", default: 1 },
+        nextRouteId: { type: "number", default: 1 },
+      };
+      const TABLES_SCHEMA = {
+        players: {
+          name: { type: "string", default: "Player" },
+          color: { type: "string", default: PLAYER_COLORS[0] },
+          destinationPoints: { type: "number", default: 0 },
+          longestRoute: { type: "boolean", default: false },
+          order: { type: "number", default: 0 },
+        },
+        routes: {
+          playerId: { type: "string" },
+          len: { type: "number", default: 1 },
+          order: { type: "number", default: 0 },
+        },
+      };
 
       function encodeContentForUrl(content) {
         const json = JSON.stringify(content);
@@ -906,10 +924,13 @@
       class TTRScoreApp extends HTMLElement {
         constructor() {
           super();
-          this.store = createStore().setValues({
-            nextPlayerId: 1,
-            nextRouteId: 1,
-          });
+          this.store = createStore()
+            .setValuesSchema(VALUES_SCHEMA)
+            .setTablesSchema(TABLES_SCHEMA)
+            .setValues({
+              nextPlayerId: 1,
+              nextRouteId: 1,
+            });
           this.persister = null;
           this.loadedFromUrl = false;
         }
