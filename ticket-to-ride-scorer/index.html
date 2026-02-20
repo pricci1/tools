@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ticket to Ride — Score Tracker</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --cream: #f5efe3;
+        --dark: #1a1208;
+        --brown: #5c3d1e;
+        --rust: #c0392b;
+        --gold: #d4a017;
+        --green: #27623a;
+        --card-bg: #fdf8f0;
+        --border: #c9b08a;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--cream);
+        color: var(--dark);
+        font-family: "Crimson Pro", serif;
+        min-height: 100vh;
+        background-image:
+          radial-gradient(
+            ellipse at 20% 80%,
+            rgba(92, 61, 30, 0.08) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            ellipse at 80% 20%,
+            rgba(192, 57, 43, 0.06) 0%,
+            transparent 50%
+          );
+      }
+
+      header {
+        text-align: center;
+        padding: 2rem 1rem 1rem;
+        border-bottom: 2px solid var(--border);
+        background: var(--card-bg);
+        box-shadow: 0 2px 12px rgba(92, 61, 30, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      header::before {
+        content: "🚂";
+        position: absolute;
+        font-size: 8rem;
+        opacity: 0.04;
+        right: 5%;
+        top: -10px;
+        transform: rotate(-10deg);
+      }
+
+      header h1 {
+        font-family: "Playfair Display", serif;
+        font-size: clamp(1.8rem, 5vw, 3rem);
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        color: var(--brown);
+      }
+
+      header p {
+        font-style: italic;
+        color: var(--rust);
+        font-size: 1.1rem;
+        margin-top: 0.25rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        padding: 1.25rem 1rem;
+        flex-wrap: wrap;
+        background: var(--dark);
+      }
+
+      .btn {
+        font-family: "Crimson Pro", serif;
+        font-size: 1rem;
+        padding: 0.5rem 1.25rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+        letter-spacing: 0.03em;
+      }
+
+      .btn-primary {
+        background: var(--gold);
+        color: var(--dark);
+        font-weight: 400;
+      }
+      .btn-primary:hover {
+        background: #e6b020;
+        transform: translateY(-1px);
+      }
+
+      .btn-danger {
+        background: var(--rust);
+        color: white;
+      }
+      .btn-danger:hover {
+        background: #a93226;
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--cream);
+        border: 1px solid rgba(245, 239, 227, 0.3);
+      }
+      .btn-ghost:hover {
+        background: rgba(245, 239, 227, 0.1);
+      }
+
+      .btn-sm {
+        font-size: 0.85rem;
+        padding: 0.3rem 0.75rem;
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 4rem;
+      }
+
+      /* Players grid */
+      .players-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+      }
+
+      .player-card {
+        background: var(--card-bg);
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(92, 61, 30, 0.08);
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .player-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .player-color-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.15);
+        flex-shrink: 0;
+      }
+
+      .player-name-input {
+        font-family: "Playfair Display", serif;
+        font-size: 1.15rem;
+        font-weight: 700;
+        background: transparent;
+        border: none;
+        border-bottom: 1px dashed transparent;
+        color: var(--dark);
+        flex: 1;
+        min-width: 0;
+        padding: 2px 0;
+        transition: border-color 0.2s;
+      }
+      .player-name-input:focus {
+        outline: none;
+        border-bottom-color: var(--gold);
+      }
+
+      .player-total {
+        font-family: "Playfair Display", serif;
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: var(--rust);
+        min-width: 48px;
+        text-align: right;
+      }
+
+      .btn-remove-player {
+        background: none;
+        border: none;
+        color: var(--border);
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 2px 4px;
+        transition: color 0.15s;
+        line-height: 1;
+      }
+      .btn-remove-player:hover {
+        color: var(--rust);
+      }
+
+      .score-section {
+        padding: 0.75rem 1rem;
+      }
+
+      .score-section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--brown);
+        margin-bottom: 0.5rem;
+        font-style: italic;
+      }
+
+      /* Route rows */
+      .routes-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .route-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(92, 61, 30, 0.04);
+        border-radius: 4px;
+        padding: 4px 6px;
+      }
+
+      .route-len-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1.5px solid var(--border);
+        background: var(--cream);
+        color: var(--brown);
+        font-family: "Playfair Display", serif;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.12s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .route-len-btn:hover {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: var(--dark);
+      }
+
+      .route-pts {
+        font-size: 0.8rem;
+        color: #666;
+        font-style: italic;
+        flex: 1;
+      }
+
+      .route-pts strong {
+        color: var(--green);
+        font-style: normal;
+      }
+
+      .btn-remove-route {
+        background: none;
+        border: none;
+        color: var(--border);
+        cursor: pointer;
+        font-size: 0.95rem;
+        padding: 2px;
+        line-height: 1;
+        transition: color 0.15s;
+      }
+      .btn-remove-route:hover {
+        color: var(--rust);
+      }
+
+      .add-route-row {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+      }
+
+      .len-chip {
+        font-family: "Crimson Pro", serif;
+        font-size: 0.85rem;
+        padding: 3px 10px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--cream);
+        cursor: pointer;
+        transition: all 0.12s;
+        color: var(--brown);
+      }
+      .len-chip:hover {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: var(--dark);
+      }
+
+      /* Special scores */
+      .special-scores {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      .special-field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .special-field label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--brown);
+        font-style: italic;
+      }
+
+      .special-input {
+        font-family: "Playfair Display", serif;
+        font-size: 1rem;
+        width: 100%;
+        padding: 4px 8px;
+        border: 1.5px solid var(--border);
+        border-radius: 4px;
+        background: var(--cream);
+        color: var(--dark);
+        text-align: center;
+      }
+      .special-input:focus {
+        outline: none;
+        border-color: var(--gold);
+      }
+
+      /* Divider */
+      .section-divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 0.6rem 0;
+      }
+
+      /* Score breakdown */
+      .score-breakdown {
+        font-size: 0.8rem;
+        color: #777;
+        font-style: italic;
+        padding: 0 1rem 0.6rem;
+      }
+
+      /* Scoreboard */
+      .scoreboard {
+        background: var(--dark);
+        color: var(--cream);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+      }
+
+      .scoreboard h2 {
+        font-family: "Playfair Display", serif;
+        font-size: 1.4rem;
+        color: var(--gold);
+        margin-bottom: 1rem;
+        border-bottom: 1px solid rgba(212, 160, 23, 0.3);
+        padding-bottom: 0.5rem;
+        letter-spacing: 0.05em;
+      }
+
+      .scoreboard-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(245, 239, 227, 0.08);
+        transition: all 0.3s;
+      }
+
+      .rank {
+        font-family: "Playfair Display", serif;
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: rgba(212, 160, 23, 0.4);
+        min-width: 2rem;
+      }
+
+      .scoreboard-row.rank-1 .rank {
+        color: var(--gold);
+      }
+      .scoreboard-row.rank-1 {
+        background: rgba(212, 160, 23, 0.08);
+        border-radius: 4px;
+        padding-left: 0.5rem;
+      }
+
+      .sb-name {
+        flex: 1;
+        font-size: 1.1rem;
+        font-weight: 300;
+      }
+
+      .sb-details {
+        font-size: 0.78rem;
+        color: rgba(245, 239, 227, 0.45);
+        font-style: italic;
+      }
+
+      .sb-score {
+        font-family: "Playfair Display", serif;
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: var(--rust);
+      }
+
+      .scoreboard-row.rank-1 .sb-score {
+        color: var(--gold);
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--brown);
+        font-style: italic;
+        opacity: 0.6;
+      }
+
+      /* Route points table */
+      .points-ref {
+        background: var(--card-bg);
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin-top: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      .points-ref h3 {
+        font-family: "Playfair Display", serif;
+        font-size: 1rem;
+        color: var(--brown);
+        margin-bottom: 0.5rem;
+      }
+
+      .ref-table {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .ref-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .ref-len {
+        font-family: "Playfair Display", serif;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--dark);
+        min-width: 1.5rem;
+      }
+
+      .ref-pts {
+        color: var(--green);
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Ticket to Ride</h1>
+      <p>Score Tracker — Original Edition</p>
+    </header>
+
+    <div class="controls">
+      <button class="btn btn-primary" onclick="addPlayer()">
+        + Add Player
+      </button>
+      <button class="btn btn-ghost" onclick="resetAll()">Reset All</button>
+    </div>
+
+    <main>
+      <div class="players-grid" id="playersGrid">
+        <div class="empty-state" id="emptyState">
+          Add players to begin tracking scores
+        </div>
+      </div>
+
+      <div class="scoreboard" id="scoreboard" style="display: none">
+        <h2>🏆 Leaderboard</h2>
+        <div id="scoreboardRows"></div>
+      </div>
+
+      <div class="points-ref">
+        <h3>Route Length → Points Reference</h3>
+        <div class="ref-table">
+          <div class="ref-item">
+            <span class="ref-len">1</span><span class="ref-pts">= 1 pt</span>
+          </div>
+          <div class="ref-item">
+            <span class="ref-len">2</span><span class="ref-pts">= 2 pts</span>
+          </div>
+          <div class="ref-item">
+            <span class="ref-len">3</span><span class="ref-pts">= 4 pts</span>
+          </div>
+          <div class="ref-item">
+            <span class="ref-len">4</span><span class="ref-pts">= 7 pts</span>
+          </div>
+          <div class="ref-item">
+            <span class="ref-len">5</span><span class="ref-pts">= 10 pts</span>
+          </div>
+          <div class="ref-item">
+            <span class="ref-len">6</span><span class="ref-pts">= 15 pts</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
+      const PLAYER_COLORS = [
+        "#e74c3c",
+        "#2980b9",
+        "#27ae60",
+        "#f39c12",
+        "#8e44ad",
+        "#1abc9c",
+        "#e67e22",
+        "#2c3e50",
+      ];
+
+      let players = [];
+      let nextId = 1;
+
+      function addPlayer() {
+        const id = nextId++;
+        const colorIndex = players.length % PLAYER_COLORS.length;
+        players.push({
+          id,
+          name: `Player ${players.length + 1}`,
+          color: PLAYER_COLORS[colorIndex],
+          routes: [],
+          destinationPoints: 0,
+          longestRoute: false,
+        });
+        render();
+      }
+
+      function removePlayer(id) {
+        players = players.filter((p) => p.id !== id);
+        render();
+      }
+
+      function addRoute(id, len) {
+        const p = players.find((p) => p.id === id);
+        if (p) {
+          p.routes.push(len);
+          render();
+        }
+      }
+
+      function removeRoute(id, idx) {
+        const p = players.find((p) => p.id === id);
+        if (p) {
+          p.routes.splice(idx, 1);
+          render();
+        }
+      }
+
+      function calcRoutePoints(routes) {
+        return routes.reduce((sum, len) => sum + (ROUTE_POINTS[len] || 0), 0);
+      }
+
+      function calcTotal(p) {
+        return (
+          calcRoutePoints(p.routes) +
+          Number(p.destinationPoints || 0) +
+          (p.longestRoute ? 10 : 0)
+        );
+      }
+
+      function updateName(id, val) {
+        const p = players.find((p) => p.id === id);
+        if (p) p.name = val;
+        updateScoreboard();
+      }
+
+      function updateDest(id, val) {
+        const p = players.find((p) => p.id === id);
+        if (p) {
+          p.destinationPoints = Number(val) || 0;
+          updateScoreboard();
+        }
+      }
+
+      function toggleLongest(id, val) {
+        const p = players.find((p) => p.id === id);
+        if (p) {
+          p.longestRoute = val;
+          updateScoreboard();
+        }
+      }
+
+      function resetAll() {
+        if (confirm("Reset all scores? Player names will be kept.")) {
+          players.forEach((p) => {
+            p.routes = [];
+            p.destinationPoints = 0;
+            p.longestRoute = false;
+          });
+          render();
+        }
+      }
+
+      function render() {
+        const grid = document.getElementById("playersGrid");
+        const empty = document.getElementById("emptyState");
+
+        if (players.length === 0) {
+          grid.innerHTML = "";
+          grid.appendChild(empty);
+          document.getElementById("scoreboard").style.display = "none";
+          return;
+        }
+
+        grid.innerHTML = "";
+        players.forEach((p) => {
+          const routePts = calcRoutePoints(p.routes);
+          const total = calcTotal(p);
+          const div = document.createElement("div");
+          div.className = "player-card";
+          div.innerHTML = `
+      <div class="player-header">
+        <div class="player-color-dot" style="background:${p.color}"></div>
+        <input class="player-name-input" value="${escHtml(p.name)}"
+          oninput="updateName(${p.id}, this.value)" placeholder="Player name">
+        <span class="player-total">${total}</span>
+        <button class="btn-remove-player" onclick="removePlayer(${p.id})" title="Remove player">✕</button>
+      </div>
+
+      <div class="score-section">
+        <div class="score-section-title">Routes Claimed</div>
+        <div class="routes-list" id="routes-${p.id}">
+          ${p.routes
+            .map(
+              (len, idx) => `
+            <div class="route-row">
+              <span class="route-len-btn">${len}</span>
+              <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
+              <button class="btn-remove-route" onclick="removeRoute(${p.id}, ${idx})">✕</button>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+        <div class="add-route-row">
+          ${[1, 2, 3, 4, 5, 6].map((l) => `<span class="len-chip" onclick="addRoute(${p.id}, ${l})">${l}</span>`).join("")}
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="score-section">
+        <div class="special-scores">
+          <div class="special-field">
+            <label>Destination Tickets (net)</label>
+            <input type="number" class="special-input" value="${p.destinationPoints}"
+              oninput="updateDest(${p.id}, this.value)" placeholder="0">
+          </div>
+          <div class="special-field">
+            <label>Longest Route +10</label>
+            <select class="special-input" onchange="toggleLongest(${p.id}, this.value === 'true')">
+              <option value="false" ${!p.longestRoute ? "selected" : ""}>No</option>
+              <option value="true" ${p.longestRoute ? "selected" : ""}>Yes (+10)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="score-breakdown">
+        Routes: ${routePts} · Tickets: ${p.destinationPoints > 0 ? "+" : ""}${p.destinationPoints || 0} · Longest: ${p.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>
+      </div>
+    `;
+          grid.appendChild(div);
+        });
+
+        updateScoreboard();
+      }
+
+      function updateScoreboard() {
+        const sb = document.getElementById("scoreboard");
+        const rows = document.getElementById("scoreboardRows");
+        if (players.length === 0) {
+          sb.style.display = "none";
+          return;
+        }
+        sb.style.display = "block";
+
+        const sorted = [...players].sort((a, b) => calcTotal(b) - calcTotal(a));
+        rows.innerHTML = sorted
+          .map(
+            (p, i) => `
+    <div class="scoreboard-row rank-${i + 1}">
+      <span class="rank">${i + 1}</span>
+      <div class="player-color-dot" style="background:${p.color}"></div>
+      <span class="sb-name">${escHtml(p.name)}</span>
+      <span class="sb-details">${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}</span>
+      <span class="sb-score">${calcTotal(p)}</span>
+    </div>
+  `,
+          )
+          .join("");
+      }
+
+      function escHtml(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      // Start with 2 players
+      addPlayer();
+      addPlayer();
+    </script>
+  </body>
+</html>
