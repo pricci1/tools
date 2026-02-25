@@ -15,7 +15,143 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-webapp-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.detect.outputs.should_deploy }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect whether webapp tools changed
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          get_type_from_file() {
+            local readme_path="$1"
+            awk '
+              BEGIN { in_frontmatter = 0 }
+              /^---[[:space:]]*$/ {
+                if (in_frontmatter == 0) {
+                  in_frontmatter = 1
+                  next
+                }
+
+                if (in_frontmatter == 1) {
+                  exit
+                }
+              }
+              in_frontmatter == 1 {
+                if ($0 ~ /^type:[[:space:]]*/) {
+                  value = $0
+                  sub(/^type:[[:space:]]*/, "", value)
+                  gsub(/[[:space:]]+$/, "", value)
+                  print value
+                  exit
+                }
+              }
+            ' "${readme_path}"
+          }
+
+          current_webapps=""
+          for dir in */ ; do
+            dir="${dir%/}"
+            readme="${dir}/README.md"
+            [ -f "${readme}" ] || continue
+
+            type_value="$(get_type_from_file "${readme}")"
+            if [ "${type_value}" = "webapp" ]; then
+              current_webapps+="${dir}"$'\n'
+            fi
+          done
+
+          base_webapps=""
+          if [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            while IFS= read -r dir; do
+              readme_content="$(git show "${BEFORE_SHA}:${dir}/README.md" 2>/dev/null || true)"
+              [ -n "${readme_content}" ] || continue
+
+              type_value="$(printf '%s\n' "${readme_content}" | awk '
+                BEGIN { in_frontmatter = 0 }
+                /^---[[:space:]]*$/ {
+                  if (in_frontmatter == 0) {
+                    in_frontmatter = 1
+                    next
+                  }
+
+                  if (in_frontmatter == 1) {
+                    exit
+                  }
+                }
+                in_frontmatter == 1 {
+                  if ($0 ~ /^type:[[:space:]]*/) {
+                    value = $0
+                    sub(/^type:[[:space:]]*/, "", value)
+                    gsub(/[[:space:]]+$/, "", value)
+                    print value
+                    exit
+                  }
+                }
+              ')"
+
+              if [ "${type_value}" = "webapp" ]; then
+                base_webapps+="${dir}"$'\n'
+              fi
+            done < <(git ls-tree -d --name-only "${BEFORE_SHA}")
+          fi
+
+          declare -A changed_paths=()
+          if [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            while IFS=$'\t' read -r status path1 path2; do
+              [ -n "${path1}" ] && changed_paths["${path1}"]=1
+              case "${status}" in
+                R*|C*)
+                  [ -n "${path2}" ] && changed_paths["${path2}"]=1
+                  ;;
+              esac
+            done < <(git diff --name-status "${BEFORE_SHA}" "${CURRENT_SHA}")
+          else
+            while IFS= read -r path; do
+              changed_paths["${path}"]=1
+            done < <(git ls-files)
+          fi
+
+          should_deploy=false
+          for path in "${!changed_paths[@]}"; do
+            if [ "${path}" = ".github/workflows/publish-webapps.yml" ]; then
+              should_deploy=true
+              break
+            fi
+
+            case "${path}" in
+              */*)
+                dir="${path%%/*}"
+                if printf '%s' "${current_webapps}" | grep -Fxq "${dir}" || printf '%s' "${base_webapps}" | grep -Fxq "${dir}"; then
+                  should_deploy=true
+                  break
+                fi
+                ;;
+            esac
+          done
+
+          echo "should_deploy=${should_deploy}" >> "${GITHUB_OUTPUT}"
+
   deploy:
+    needs: detect-webapp-changes
+    if: needs.detect-webapp-changes.outputs.should_deploy == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
