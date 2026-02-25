@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") <command> [args]
+
+Commands:
+  last <N>               Files touched by the last N commits
+  range <hash1> <hash2>  Files touched by a range of commits (inclusive)
+  commit <hash>          Files touched by a specific commit
+  branch <name>          Files touched by a branch (vs. main/master)
+
+EOF
+  exit 1
+}
+
+git_files() {
+  git diff-tree --no-commit-id -r --name-only "$@"
+}
+
+[[ $# -lt 1 ]] && usage
+
+case "$1" in
+  last)
+    [[ $# -lt 2 ]] && usage
+    git log --no-commit-id -r --name-only --diff-filter=ACDMRT --format="" HEAD~"$2"..HEAD | sort -u
+    ;;
+  range)
+    [[ $# -lt 3 ]] && usage
+    git log --no-commit-id -r --name-only --diff-filter=ACDMRT --format="" "$2"^.."$3" | sort -u
+    ;;
+  commit)
+    [[ $# -lt 2 ]] && usage
+    git_files -m "$2"
+    ;;
+  branch)
+    [[ $# -lt 2 ]] && usage
+    base=$(git merge-base HEAD "$(git rev-parse "$2")" 2>/dev/null || git merge-base main "$2" 2>/dev/null || git merge-base master "$2")
+    git log --no-commit-id -r --name-only --diff-filter=ACDMRT --format="" "$base".."$2" | sort -u
+    ;;
+  *)
+    usage
+    ;;
+esac
