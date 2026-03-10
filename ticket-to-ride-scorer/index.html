@@ -489,6 +489,67 @@
         font-style: italic;
       }
 
+      /* Edition toggle */
+      .edition-toggle {
+        display: flex;
+        gap: 0;
+        justify-content: center;
+        margin-top: 0.6rem;
+      }
+
+      .edition-btn {
+        font-family: "Crimson Pro", serif;
+        font-size: 0.9rem;
+        padding: 0.3rem 1rem;
+        border: 1.5px solid var(--gold);
+        background: transparent;
+        color: var(--brown);
+        cursor: pointer;
+        letter-spacing: 0.05em;
+        transition: all 0.15s;
+      }
+
+      .edition-btn:first-child {
+        border-radius: 20px 0 0 20px;
+        border-right-width: 0.75px;
+      }
+
+      .edition-btn:last-child {
+        border-radius: 0 20px 20px 0;
+        border-left-width: 0.75px;
+      }
+
+      .edition-btn.active {
+        background: var(--gold);
+        color: var(--dark);
+        font-weight: 600;
+      }
+
+      .edition-btn:hover:not(.active) {
+        background: rgba(212, 160, 23, 0.12);
+      }
+
+      /* Station control */
+      .station-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .station-count {
+        min-width: 3ch;
+        text-align: center;
+        font-family: "Playfair Display", serif;
+        font-size: 1rem;
+        color: var(--dark);
+      }
+
+      .station-pts {
+        font-size: 0.8rem;
+        color: var(--green);
+        font-style: italic;
+      }
+
       @media (max-width: 720px) {
         header {
           padding: 1.5rem 0.85rem 0.9rem;
@@ -658,6 +719,7 @@
       const VALUES_SCHEMA = {
         nextPlayerId: { type: "number", default: 1 },
         nextRouteId: { type: "number", default: 1 },
+        edition: { type: "string", default: "original" },
       };
       const TABLES_SCHEMA = {
         players: {
@@ -665,6 +727,7 @@
           color: { type: "string", default: PLAYER_COLORS[0] },
           destinationPoints: { type: "number", default: 0 },
           longestRoute: { type: "boolean", default: false },
+          stationsUsed: { type: "number", default: 0 },
           order: { type: "number", default: 0 },
         },
         routes: {
@@ -720,11 +783,13 @@
         return routes.reduce((sum, len) => sum + (ROUTE_POINTS[len] || 0), 0);
       }
 
-      function calcTotal(p) {
+      function calcTotal(p, edition) {
+        const stationBonus = edition === "europe" ? (3 - (p.stationsUsed || 0)) * 4 : 0;
         return (
           calcRoutePoints(p.routes) +
           Number(p.destinationPoints || 0) +
-          (p.longestRoute ? 10 : 0)
+          (p.longestRoute ? 10 : 0) +
+          stationBonus
         );
       }
 
@@ -737,6 +802,15 @@
 
         get player() {
           return this._player;
+        }
+
+        set edition(val) {
+          this._edition = val;
+          if (this._colorDot) this.render();
+        }
+
+        get edition() {
+          return this._edition || "original";
         }
 
         connectedCallback() {
@@ -806,6 +880,25 @@
               </div>
             </div>
 
+            <hr class="section-divider station-divider" style="display:none">
+
+            <div class="score-section station-section" style="display:none">
+              <div class="special-scores">
+                <div class="special-field">
+                  <label>Stations Used</label>
+                  <div class="station-control">
+                    <button class="route-adjust station-dec" type="button">-</button>
+                    <span class="station-count">0/3</span>
+                    <button class="route-adjust station-inc" type="button">+</button>
+                  </div>
+                </div>
+                <div class="special-field">
+                  <label>Station Bonus</label>
+                  <span class="station-pts">+12 pts</span>
+                </div>
+              </div>
+            </div>
+
             <div class="score-breakdown"></div>
           `;
 
@@ -816,6 +909,10 @@
           this._destInput = this.querySelector(".dest-input");
           this._longestSelect = this.querySelector(".longest-select");
           this._breakdownEl = this.querySelector(".score-breakdown");
+          this._stationDivider = this.querySelector(".station-divider");
+          this._stationSection = this.querySelector(".station-section");
+          this._stationCount = this.querySelector(".station-count");
+          this._stationPts = this.querySelector(".station-pts");
 
           this._routeRefs = {};
           for (let len = 1; len <= 6; len++) {
@@ -867,15 +964,28 @@
               longestRoute,
             });
           });
+
+          this.addEventListener("click", (e) => {
+            if (!this._player) return;
+            const current = this._player.stationsUsed || 0;
+            if (e.target.closest(".station-dec") && current > 0) {
+              this.emit("station-count-change", { playerId: this._player.id, stationsUsed: current - 1 });
+            } else if (e.target.closest(".station-inc") && current < 3) {
+              this.emit("station-count-change", { playerId: this._player.id, stationsUsed: current + 1 });
+            }
+          });
         }
 
         render() {
           if (!this._player) return;
 
           const p = this._player;
+          const edition = this.edition;
           const routePts = calcRoutePoints(p.routes);
-          const total = calcTotal(p);
+          const total = calcTotal(p, edition);
           const destinationPoints = Number(p.destinationPoints || 0);
+          const stationsUsed = p.stationsUsed || 0;
+          const stationBonus = (3 - stationsUsed) * 4;
 
           this._colorDot.style.background = p.color;
 
@@ -900,20 +1010,34 @@
             this._longestSelect.value = String(p.longestRoute);
           }
 
+          const isEurope = edition === "europe";
+          const display = isEurope ? "" : "none";
+          this._stationDivider.style.display = display;
+          this._stationSection.style.display = display;
+          if (isEurope) {
+            this._stationCount.textContent = `${stationsUsed}/3`;
+            this._stationPts.textContent = `+${stationBonus} pts`;
+          }
+
+          const breakdownStation = isEurope ? ` · Stations: +${stationBonus}` : "";
           this._breakdownEl.innerHTML =
-            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${p.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>`;
+            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${p.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
         }
 
         updateScoreDisplay() {
           if (!this._player) return;
 
+          const edition = this.edition;
           const routePts = calcRoutePoints(this._player.routes);
-          const total = calcTotal(this._player);
+          const total = calcTotal(this._player, edition);
           const destinationPoints = Number(this._player.destinationPoints || 0);
+          const stationsUsed = this._player.stationsUsed || 0;
+          const stationBonus = (3 - stationsUsed) * 4;
 
           this._totalEl.textContent = String(total);
+          const breakdownStation = edition === "europe" ? ` · Stations: +${stationBonus}` : "";
           this._breakdownEl.innerHTML =
-            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"} = <strong>${total} pts</strong>`;
+            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
         }
       }
 
@@ -933,8 +1057,14 @@
           if (this._rowsContainer) this.render();
         }
 
+        set edition(val) {
+          this._edition = val;
+          if (this._rowsContainer) this.render();
+        }
+
         render() {
           const players = this._players || [];
+          const edition = this._edition || "original";
           if (players.length === 0) {
             this.style.display = "none";
             return;
@@ -943,7 +1073,7 @@
           this.style.display = "block";
           if (!this._rowsContainer) this.setupDOM();
 
-          const sorted = [...players].sort((a, b) => calcTotal(b) - calcTotal(a));
+          const sorted = [...players].sort((a, b) => calcTotal(b, edition) - calcTotal(a, edition));
           const existing = new Map();
           for (const row of this._rowsContainer.children) {
             existing.set(row.dataset.playerId, row);
@@ -972,8 +1102,9 @@
             row._rankEl.textContent = i + 1;
             row._dotEl.style.background = p.color;
             row._nameEl.textContent = p.name;
-            row._detailsEl.textContent = `${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}`;
-            row._scoreEl.textContent = calcTotal(p);
+            const stationPart = edition === "europe" ? `+${(3 - (p.stationsUsed || 0)) * 4}st` : "";
+            row._detailsEl.textContent = `${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}${stationPart}`;
+            row._scoreEl.textContent = calcTotal(p, edition);
             fragment.appendChild(row);
           });
 
@@ -1074,6 +1205,14 @@
             }
           }, opts);
 
+          this.addEventListener("station-count-change", (event) => {
+            const { playerId, stationsUsed } = event.detail;
+            if (this.store.hasRow("players", playerId)) {
+              this.store.setCell("players", playerId, "stationsUsed", stationsUsed);
+              this.refreshPlayerCard(playerId);
+            }
+          }, opts);
+
           this.initStorePersistence();
         }
 
@@ -1114,14 +1253,18 @@
             return;
           }
 
-          this.renderPlayers();
+          this.syncEdition();
         }
 
         renderShell() {
           this.innerHTML = `
             <header>
               <h1>Ticket to Ride</h1>
-              <p>Score Tracker — Original Edition</p>
+              <p>Score Tracker</p>
+              <div class="edition-toggle">
+                <button class="edition-btn active" type="button" data-edition="original">Original</button>
+                <button class="edition-btn" type="button" data-edition="europe">Europe</button>
+              </div>
             </header>
 
             <div class="controls">
@@ -1166,6 +1309,21 @@
           this.querySelector("#resetBtn")?.addEventListener("click", () => {
             this.resetAll();
           }, { signal: this._ac.signal });
+
+          this.querySelectorAll(".edition-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              this.store.setValue("edition", btn.dataset.edition);
+              this.syncEdition();
+            }, { signal: this._ac.signal });
+          });
+        }
+
+        syncEdition() {
+          const edition = this.store.getValue("edition") || "original";
+          this.querySelectorAll(".edition-btn").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.edition === edition);
+          });
+          this.renderPlayers();
         }
 
         getPlayers() {
@@ -1178,6 +1336,7 @@
               color: String(row.color || PLAYER_COLORS[0]),
               destinationPoints: Number(row.destinationPoints || 0),
               longestRoute: Boolean(row.longestRoute),
+              stationsUsed: Number(row.stationsUsed || 0),
               routes,
               order: Number(row.order || 0),
             };
@@ -1211,6 +1370,7 @@
               color: PLAYER_COLORS[colorIndex],
               destinationPoints: 0,
               longestRoute: false,
+              stationsUsed: 0,
               order: playerCount,
             });
             this.store.setValue("nextPlayerId", Number(id) + 1);
@@ -1235,6 +1395,7 @@
           }
 
           card.player = player;
+          card.edition = this.store.getValue("edition") || "original";
           card.dataset.playerId = player.id;
           this.updateScoreboard();
         }
@@ -1246,6 +1407,7 @@
               Object.keys(players).forEach((id) => {
                 this.store.setCell("players", id, "destinationPoints", 0);
                 this.store.setCell("players", id, "longestRoute", false);
+                this.store.setCell("players", id, "stationsUsed", 0);
               });
 
               const routes = this.store.getTable("routes") || {};
@@ -1262,6 +1424,7 @@
           if (!grid) return;
 
           const players = this.getPlayers();
+          const edition = this.store.getValue("edition") || "original";
 
           if (players.length === 0) {
             grid.innerHTML =
@@ -1282,6 +1445,7 @@
               card.dataset.playerId = player.id;
             }
             card.player = player;
+            card.edition = edition;
             fragment.appendChild(card);
           }
           grid.replaceChildren(fragment);
@@ -1292,6 +1456,7 @@
         updateScoreboard() {
           const scoreboard = this.querySelector("#scoreboard");
           if (scoreboard) {
+            scoreboard.edition = this.store.getValue("edition") || "original";
             scoreboard.players = this.getPlayers();
           }
         }
