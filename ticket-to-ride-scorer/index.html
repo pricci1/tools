@@ -705,8 +705,6 @@
       import { createCustomPersister } from "tinybase/persisters";
 
       const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 8: 21 };
-      const ORIGINAL_ROUTE_LENS = [1, 2, 3, 4, 5, 6];
-      const EUROPE_ROUTE_LENS = [1, 2, 3, 4, 6, 8];
       const PLAYER_COLORS = [
         "#2980b9",
         "#e74c3c",
@@ -779,20 +777,31 @@
         window.history.replaceState(null, "", nextUrl);
       }
 
-      function calcRoutePoints(routes, edition) {
-        const validLens = edition === "europe" ? EUROPE_ROUTE_LENS : ORIGINAL_ROUTE_LENS;
-        return routes.reduce((sum, len) => sum + (validLens.includes(len) ? (ROUTE_POINTS[len] || 0) : 0), 0);
+      class OriginalScorer {
+        get validLens() { return [1, 2, 3, 4, 5, 6]; }
+        get hasStations() { return false; }
+        stationBonus(_stationsUsed) { return 0; }
+        calcRoutePoints(routes) {
+          return routes.reduce((sum, len) => sum + (this.validLens.includes(len) ? (ROUTE_POINTS[len] || 0) : 0), 0);
+        }
+        calcTotal(p) {
+          return this.calcRoutePoints(p.routes) + Number(p.destinationPoints || 0) + (p.longestRoute ? 10 : 0);
+        }
       }
 
-      function calcTotal(p, edition) {
-        const stationBonus = edition === "europe" ? (3 - (p.stationsUsed || 0)) * 4 : 0;
-        return (
-          calcRoutePoints(p.routes, edition) +
-          Number(p.destinationPoints || 0) +
-          (p.longestRoute ? 10 : 0) +
-          stationBonus
-        );
+      class EuropeScorer {
+        get validLens() { return [1, 2, 3, 4, 6, 8]; }
+        get hasStations() { return true; }
+        stationBonus(stationsUsed) { return (3 - stationsUsed) * 4; }
+        calcRoutePoints(routes) {
+          return routes.reduce((sum, len) => sum + (this.validLens.includes(len) ? (ROUTE_POINTS[len] || 0) : 0), 0);
+        }
+        calcTotal(p) {
+          return this.calcRoutePoints(p.routes) + Number(p.destinationPoints || 0) + (p.longestRoute ? 10 : 0) + this.stationBonus(p.stationsUsed || 0);
+        }
       }
+
+      const SCORERS = { original: new OriginalScorer(), europe: new EuropeScorer() };
 
 
       class TTRPlayerCard extends HTMLElement {
@@ -805,13 +814,13 @@
           return this._player;
         }
 
-        set edition(val) {
-          this._edition = val;
+        set scorer(val) {
+          this._scorer = val;
           if (this._colorDot) this.render();
         }
 
-        get edition() {
-          return this._edition || "original";
+        get scorer() {
+          return this._scorer || SCORERS.original;
         }
 
         connectedCallback() {
@@ -981,12 +990,12 @@
           if (!this._player) return;
 
           const p = this._player;
-          const edition = this.edition;
-          const routePts = calcRoutePoints(p.routes, edition);
-          const total = calcTotal(p, edition);
+          const scorer = this.scorer;
+          const routePts = scorer.calcRoutePoints(p.routes);
+          const total = scorer.calcTotal(p);
           const destinationPoints = Number(p.destinationPoints || 0);
           const stationsUsed = p.stationsUsed || 0;
-          const stationBonus = (3 - stationsUsed) * 4;
+          const stationBonus = scorer.stationBonus(stationsUsed);
 
           this._colorDot.style.background = p.color;
 
@@ -996,11 +1005,9 @@
 
           this._totalEl.textContent = String(total);
 
-          const isEurope = edition === "europe";
-          const activeLens = isEurope ? EUROPE_ROUTE_LENS : ORIGINAL_ROUTE_LENS;
           for (const len of [1, 2, 3, 4, 5, 6, 8]) {
             const ref = this._routeRefs[len];
-            const active = activeLens.includes(len);
+            const active = scorer.validLens.includes(len);
             const row = ref.count.closest(".route-row");
             row.style.display = active ? "" : "none";
             if (active) {
@@ -1018,15 +1025,15 @@
             this._longestSelect.value = String(p.longestRoute);
           }
 
-          const display = isEurope ? "" : "none";
+          const display = scorer.hasStations ? "" : "none";
           this._stationDivider.style.display = display;
           this._stationSection.style.display = display;
-          if (isEurope) {
+          if (scorer.hasStations) {
             this._stationCount.textContent = `${stationsUsed}/3`;
             this._stationPts.textContent = `+${stationBonus} pts`;
           }
 
-          const breakdownStation = isEurope ? ` · Stations: +${stationBonus}` : "";
+          const breakdownStation = scorer.hasStations ? ` · Stations: +${stationBonus}` : "";
           this._breakdownEl.innerHTML =
             `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${p.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
         }
@@ -1034,15 +1041,14 @@
         updateScoreDisplay() {
           if (!this._player) return;
 
-          const edition = this.edition;
-          const routePts = calcRoutePoints(this._player.routes, edition);
-          const total = calcTotal(this._player, edition);
+          const scorer = this.scorer;
+          const routePts = scorer.calcRoutePoints(this._player.routes);
+          const total = scorer.calcTotal(this._player);
           const destinationPoints = Number(this._player.destinationPoints || 0);
-          const stationsUsed = this._player.stationsUsed || 0;
-          const stationBonus = (3 - stationsUsed) * 4;
+          const stationBonus = scorer.stationBonus(this._player.stationsUsed || 0);
 
           this._totalEl.textContent = String(total);
-          const breakdownStation = edition === "europe" ? ` · Stations: +${stationBonus}` : "";
+          const breakdownStation = scorer.hasStations ? ` · Stations: +${stationBonus}` : "";
           this._breakdownEl.innerHTML =
             `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
         }
@@ -1064,14 +1070,14 @@
           if (this._rowsContainer) this.render();
         }
 
-        set edition(val) {
-          this._edition = val;
+        set scorer(val) {
+          this._scorer = val;
           if (this._rowsContainer) this.render();
         }
 
         render() {
           const players = this._players || [];
-          const edition = this._edition || "original";
+          const scorer = this._scorer || SCORERS.original;
           if (players.length === 0) {
             this.style.display = "none";
             return;
@@ -1080,7 +1086,7 @@
           this.style.display = "block";
           if (!this._rowsContainer) this.setupDOM();
 
-          const sorted = [...players].sort((a, b) => calcTotal(b, edition) - calcTotal(a, edition));
+          const sorted = [...players].sort((a, b) => scorer.calcTotal(b) - scorer.calcTotal(a));
           const existing = new Map();
           for (const row of this._rowsContainer.children) {
             existing.set(row.dataset.playerId, row);
@@ -1109,9 +1115,9 @@
             row._rankEl.textContent = i + 1;
             row._dotEl.style.background = p.color;
             row._nameEl.textContent = p.name;
-            const stationPart = edition === "europe" ? `+${(3 - (p.stationsUsed || 0)) * 4}st` : "";
-            row._detailsEl.textContent = `${p.routes.length} routes · ${calcRoutePoints(p.routes, edition)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}${stationPart}`;
-            row._scoreEl.textContent = calcTotal(p, edition);
+            const stationPart = scorer.hasStations ? `+${scorer.stationBonus(p.stationsUsed || 0)}st` : "";
+            row._detailsEl.textContent = `${p.routes.length} routes · ${scorer.calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}${stationPart}`;
+            row._scoreEl.textContent = scorer.calcTotal(p);
             fragment.appendChild(row);
           });
 
@@ -1408,7 +1414,7 @@
           }
 
           card.player = player;
-          card.edition = this.store.getValue("edition") || "original";
+          card.scorer = SCORERS[this.store.getValue("edition") || "original"];
           card.dataset.playerId = player.id;
           this.updateScoreboard();
         }
@@ -1458,7 +1464,7 @@
               card.dataset.playerId = player.id;
             }
             card.player = player;
-            card.edition = edition;
+            card.scorer = SCORERS[edition];
             fragment.appendChild(card);
           }
           grid.replaceChildren(fragment);
@@ -1469,7 +1475,7 @@
         updateScoreboard() {
           const scoreboard = this.querySelector("#scoreboard");
           if (scoreboard) {
-            scoreboard.edition = this.store.getValue("edition") || "original";
+            scoreboard.scorer = SCORERS[this.store.getValue("edition") || "original"];
             scoreboard.players = this.getPlayers();
           }
         }
