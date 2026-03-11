@@ -704,7 +704,9 @@
       import { createStore } from "tinybase";
       import { createCustomPersister } from "tinybase/persisters";
 
-      const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
+      const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 8: 21 };
+      const ORIGINAL_ROUTE_LENS = [1, 2, 3, 4, 5, 6];
+      const EUROPE_ROUTE_LENS = [1, 2, 3, 4, 6, 8];
       const PLAYER_COLORS = [
         "#2980b9",
         "#e74c3c",
@@ -842,10 +844,10 @@
             <div class="score-section">
               <div class="score-section-title">Routes Claimed</div>
               <div class="routes-list">
-                ${[1, 2, 3, 4, 5, 6]
+                ${[1, 2, 3, 4, 5, 6, 8]
                   .map(
                     (len) => `
-                      <div class="route-row">
+                      <div class="route-row" data-route-edition="${len === 5 ? "original" : len === 8 ? "europe" : "both"}">
                         <span class="route-len-btn">${len}</span>
                         <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
                         <div class="route-counter">
@@ -913,7 +915,7 @@
           this._stationPts = this.querySelector(".station-pts");
 
           this._routeRefs = {};
-          for (let len = 1; len <= 6; len++) {
+          for (const len of [1, 2, 3, 4, 5, 6, 8]) {
             this._routeRefs[len] = {
               count: this.querySelector(`.route-count[data-route-len="${len}"]`),
               minus: this.querySelector(`.route-adjust[data-route-len="${len}"][data-route-delta="-1"]`),
@@ -993,11 +995,18 @@
 
           this._totalEl.textContent = String(total);
 
-          for (let len = 1; len <= 6; len++) {
-            const count = p.routes.filter((r) => r === len).length;
+          const isEurope = edition === "europe";
+          const activeLens = isEurope ? EUROPE_ROUTE_LENS : ORIGINAL_ROUTE_LENS;
+          for (const len of [1, 2, 3, 4, 5, 6, 8]) {
             const ref = this._routeRefs[len];
-            ref.count.textContent = String(count);
-            ref.minus.disabled = count === 0;
+            const active = activeLens.includes(len);
+            const row = ref.count.closest(".route-row");
+            row.style.display = active ? "" : "none";
+            if (active) {
+              const count = p.routes.filter((r) => r === len).length;
+              ref.count.textContent = String(count);
+              ref.minus.disabled = count === 0;
+            }
           }
 
           if (document.activeElement !== this._destInput) {
@@ -1008,7 +1017,6 @@
             this._longestSelect.value = String(p.longestRoute);
           }
 
-          const isEurope = edition === "europe";
           const display = isEurope ? "" : "none";
           this._stationDivider.style.display = display;
           this._stationSection.style.display = display;
@@ -1289,11 +1297,14 @@
                   <div class="ref-item">
                     <span class="ref-len">4</span><span class="ref-pts">= 7 pts</span>
                   </div>
-                  <div class="ref-item">
+                  <div class="ref-item" data-ref-edition="original">
                     <span class="ref-len">5</span><span class="ref-pts">= 10 pts</span>
                   </div>
                   <div class="ref-item">
                     <span class="ref-len">6</span><span class="ref-pts">= 15 pts</span>
+                  </div>
+                  <div class="ref-item" data-ref-edition="europe" style="display:none">
+                    <span class="ref-len">8</span><span class="ref-pts">= 21 pts</span>
                   </div>
                 </div>
               </div>
@@ -1320,6 +1331,9 @@
           const edition = this.store.getValue("edition") || "original";
           this.querySelectorAll(".edition-btn").forEach((btn) => {
             btn.classList.toggle("active", btn.dataset.edition === edition);
+          });
+          this.querySelectorAll("[data-ref-edition]").forEach((el) => {
+            el.style.display = el.dataset.refEdition === edition ? "" : "none";
           });
           this.renderPlayers();
         }
