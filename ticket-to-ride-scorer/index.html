@@ -779,14 +779,15 @@
         window.history.replaceState(null, "", nextUrl);
       }
 
-      function calcRoutePoints(routes) {
-        return routes.reduce((sum, len) => sum + (ROUTE_POINTS[len] || 0), 0);
+      function calcRoutePoints(routes, edition) {
+        const validLens = edition === "europe" ? EUROPE_ROUTE_LENS : ORIGINAL_ROUTE_LENS;
+        return routes.reduce((sum, len) => sum + (validLens.includes(len) ? (ROUTE_POINTS[len] || 0) : 0), 0);
       }
 
       function calcTotal(p, edition) {
         const stationBonus = edition === "europe" ? (3 - (p.stationsUsed || 0)) * 4 : 0;
         return (
-          calcRoutePoints(p.routes) +
+          calcRoutePoints(p.routes, edition) +
           Number(p.destinationPoints || 0) +
           (p.longestRoute ? 10 : 0) +
           stationBonus
@@ -981,7 +982,7 @@
 
           const p = this._player;
           const edition = this.edition;
-          const routePts = calcRoutePoints(p.routes);
+          const routePts = calcRoutePoints(p.routes, edition);
           const total = calcTotal(p, edition);
           const destinationPoints = Number(p.destinationPoints || 0);
           const stationsUsed = p.stationsUsed || 0;
@@ -1034,7 +1035,7 @@
           if (!this._player) return;
 
           const edition = this.edition;
-          const routePts = calcRoutePoints(this._player.routes);
+          const routePts = calcRoutePoints(this._player.routes, edition);
           const total = calcTotal(this._player, edition);
           const destinationPoints = Number(this._player.destinationPoints || 0);
           const stationsUsed = this._player.stationsUsed || 0;
@@ -1109,7 +1110,7 @@
             row._dotEl.style.background = p.color;
             row._nameEl.textContent = p.name;
             const stationPart = edition === "europe" ? `+${(3 - (p.stationsUsed || 0)) * 4}st` : "";
-            row._detailsEl.textContent = `${p.routes.length} routes · ${calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}${stationPart}`;
+            row._detailsEl.textContent = `${p.routes.length} routes · ${calcRoutePoints(p.routes, edition)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}${stationPart}`;
             row._scoreEl.textContent = calcTotal(p, edition);
             fragment.appendChild(row);
           });
