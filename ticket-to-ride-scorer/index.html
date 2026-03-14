@@ -251,6 +251,11 @@
         padding: 4px 6px;
       }
 
+      .route-row.inactive {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
       .route-len-btn {
         width: 26px;
         height: 26px;
@@ -929,6 +934,7 @@
             this._routeRefs[len] = {
               count: this.querySelector(`.route-count[data-route-len="${len}"]`),
               minus: this.querySelector(`.route-adjust[data-route-len="${len}"][data-route-delta="-1"]`),
+              plus: this.querySelector(`.route-adjust[data-route-len="${len}"][data-route-delta="1"]`),
             };
           }
         }
@@ -1009,12 +1015,11 @@
             const ref = this._routeRefs[len];
             const active = scorer.validLens.includes(len);
             const row = ref.count.closest(".route-row");
-            row.style.display = active ? "" : "none";
-            if (active) {
-              const count = p.routes.filter((r) => r === len).length;
-              ref.count.textContent = String(count);
-              ref.minus.disabled = count === 0;
-            }
+            row.classList.toggle("inactive", !active);
+            const count = p.routes.filter((r) => r === len).length;
+            ref.count.textContent = String(count);
+            ref.minus.disabled = !active || count === 0;
+            ref.plus.disabled = !active;
           }
 
           if (document.activeElement !== this._destInput) {
