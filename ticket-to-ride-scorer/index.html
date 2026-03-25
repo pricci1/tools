@@ -505,19 +505,30 @@
       .edition-btn {
         font-family: "Crimson Pro", serif;
         font-size: 0.9rem;
-        padding: 0.3rem 1.25rem;
+        padding: 0;
         border: 1.5px solid var(--gold);
         border-radius: 20px;
-        background: var(--gold);
-        color: var(--dark);
-        font-weight: 600;
+        background: transparent;
         cursor: pointer;
         letter-spacing: 0.05em;
+        display: inline-flex;
+        overflow: hidden;
+      }
+
+      .edition-btn span {
+        padding: 0.3rem 1rem;
+        color: var(--brown);
         transition: all 0.15s;
       }
 
-      .edition-btn:hover {
-        background: rgba(212, 160, 23, 0.75);
+      .edition-btn span.active {
+        background: var(--gold);
+        color: var(--dark);
+        font-weight: 600;
+      }
+
+      .edition-btn:hover span:not(.active) {
+        background: rgba(212, 160, 23, 0.12);
       }
 
       /* Station control */
@@ -1266,7 +1277,9 @@
               <h1>Ticket to Ride</h1>
               <p>Score Tracker</p>
               <div class="edition-toggle">
-                <button class="edition-btn" type="button" id="editionBtn">Original</button>
+                <button class="edition-btn" type="button" id="editionBtn">
+                  <span data-edition="original" class="active">Original</span><span data-edition="europe">Europe</span>
+                </button>
               </div>
             </header>
 
@@ -1325,8 +1338,9 @@
 
         syncEdition() {
           const edition = this.store.getValue("edition") || "original";
-          const btn = this.querySelector("#editionBtn");
-          if (btn) btn.textContent = edition === "original" ? "Original" : "Europe";
+          this.querySelectorAll("#editionBtn span").forEach((span) => {
+            span.classList.toggle("active", span.dataset.edition === edition);
+          });
           this.querySelectorAll("[data-ref-edition]").forEach((el) => {
             el.style.display = el.dataset.refEdition === edition ? "" : "none";
           });
