@@ -271,6 +271,43 @@
         border-color: var(--accent);
       }
 
+      /* ─── Confirm row ─── */
+      #confirm-row {
+        display: flex;
+        gap: 10px;
+      }
+      #confirm-btn {
+        flex: 1;
+        background: var(--accent);
+        color: var(--bg);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      #confirm-btn:hover {
+        opacity: 0.85;
+      }
+      #cancel-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        cursor: pointer;
+        transition: border-color 0.2s, color 0.2s;
+      }
+      #cancel-btn:hover {
+        border-color: var(--text);
+        color: var(--text);
+      }
+
       /* ─── Settings screen ─── */
       #settings-screen {
         gap: 16px;
@@ -488,11 +525,16 @@
             <div class="url-value" id="display-url">—</div>
           </div>
 
+          <div id="confirm-row">
+            <button id="confirm-btn" onclick="confirmUnsub()">Unsubscribe</button>
+            <button id="cancel-btn" onclick="showIdle()">Cancel</button>
+          </div>
+
           <div id="unconfigured">
             ⚠ Server not configured — open Settings and fill in your credentials first.
           </div>
 
-          <div id="status">
+          <div id="status" style="display:none">
             <div class="status-row" id="step-token">
               <div class="status-dot pending"></div>
               <div class="status-text">Authenticating with FreshRSS<small></small></div>
@@ -593,6 +635,15 @@
       function showIdle() {
         showScreen("idle-screen");
       }
+      function showConfirm() {
+        document.getElementById("confirm-row").style.display = "flex";
+        document.getElementById("status").style.display = "none";
+        document.getElementById("result-banner").className = "";
+        document.getElementById("result-banner").textContent = "";
+        document.getElementById("retry-btn").style.display = "none";
+        document.getElementById("unconfigured").style.display = "none";
+        showScreen("share-screen");
+      }
       function showSettings() {
         loadSettingsForm();
         showScreen("settings-screen");
@@ -654,6 +705,11 @@
       // ─── Core unsubscribe flow ───────────────────────────────────────────────────
       let lastSharedUrl = null;
 
+      function confirmUnsub() {
+        document.getElementById("confirm-row").style.display = "none";
+        runUnsub(lastSharedUrl);
+      }
+
       async function runUnsub(sharedUrl) {
         const { server, user, key } = getSettings();
 
@@ -662,6 +718,7 @@
         document.getElementById("result-banner").textContent = "";
         document.getElementById("retry-btn").style.display = "none";
         document.getElementById("unconfigured").style.display = "none";
+        document.getElementById("status").style.display = "flex";
         ["step-token", "step-feeds", "step-unsub"].forEach((id) => setStep(id, "pending"));
 
         if (!server || !user || !key) {
@@ -746,7 +803,10 @@
       }
 
       function retryLast() {
-        if (lastSharedUrl) runUnsub(lastSharedUrl);
+        if (lastSharedUrl) {
+          document.getElementById("confirm-row").style.display = "none";
+          runUnsub(lastSharedUrl);
+        }
       }
 
       // ─── Paste URL form ──────────────────────────────────────────────────────────
@@ -761,8 +821,7 @@
         lastSharedUrl = url;
         document.getElementById("display-url").textContent = url;
         document.getElementById("paste-url").value = "";
-        showScreen("share-screen");
-        runUnsub(url);
+        showConfirm();
       }
 
       // ─── Incoming share handling ─────────────────────────────────────────────────
@@ -781,8 +840,7 @@
 
         lastSharedUrl = sharedUrl;
         document.getElementById("display-url").textContent = sharedUrl;
-        showScreen("share-screen");
-        runUnsub(sharedUrl);
+        showConfirm();
       }
 
       // ─── Boot ────────────────────────────────────────────────────────────────────
