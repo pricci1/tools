@@ -3,6 +3,8 @@ import { Glob } from "bun";
 import matter from "gray-matter";
 import Handlebars from "handlebars";
 
+const DEPLOY_HOST = process.env.DEPLOY_HOST ?? "https://pricci1.github.io/tools";
+
 const args = Bun.argv.slice(2);
 
 let rootDir = args[0];
@@ -30,6 +32,7 @@ interface Tool {
 	link: string;
 	path: string;
 	lang?: "bun";
+	deployedUrl?: string;
 }
 
 async function scanToolsDirectory(rootDir: string): Promise<Tool[]> {
@@ -60,6 +63,7 @@ async function scanToolsDirectory(rootDir: string): Promise<Tool[]> {
 					link: link,
 					path: file,
 					lang: hasBunLock ? "bun" : undefined,
+					deployedUrl: data.type === "webapp" ? `${DEPLOY_HOST}/${toolDir}` : undefined,
 				});
 			}
 		} catch (error) {
@@ -77,10 +81,10 @@ tools.sort((a, b) => a.name.localeCompare(b.name));
 const templateSource = `
 # Tools
 
-| Name | Purpose |
-|------|---------|
+| Name | Purpose | Live |
+|------|---------|------|
 {{#each tools}}
-| [{{name}}]({{link}}) | {{purpose}} |
+| [{{name}}]({{link}}) | {{purpose}} | {{#if deployedUrl}}[↗]({{deployedUrl}}){{/if}} |
 {{/each}}
 `;
 
