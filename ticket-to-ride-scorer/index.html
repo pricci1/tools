@@ -505,33 +505,19 @@
       .edition-btn {
         font-family: "Crimson Pro", serif;
         font-size: 0.9rem;
-        padding: 0.3rem 1rem;
+        padding: 0.3rem 1.25rem;
         border: 1.5px solid var(--gold);
-        background: transparent;
-        color: var(--brown);
+        border-radius: 20px;
+        background: var(--gold);
+        color: var(--dark);
+        font-weight: 600;
         cursor: pointer;
         letter-spacing: 0.05em;
         transition: all 0.15s;
       }
 
-      .edition-btn:first-child {
-        border-radius: 20px 0 0 20px;
-        border-right-width: 0.75px;
-      }
-
-      .edition-btn:last-child {
-        border-radius: 0 20px 20px 0;
-        border-left-width: 0.75px;
-      }
-
-      .edition-btn.active {
-        background: var(--gold);
-        color: var(--dark);
-        font-weight: 600;
-      }
-
-      .edition-btn:hover:not(.active) {
-        background: rgba(212, 160, 23, 0.12);
+      .edition-btn:hover {
+        background: rgba(212, 160, 23, 0.75);
       }
 
       /* Station control */
@@ -1280,8 +1266,7 @@
               <h1>Ticket to Ride</h1>
               <p>Score Tracker</p>
               <div class="edition-toggle">
-                <button class="edition-btn active" type="button" data-edition="original">Original</button>
-                <button class="edition-btn" type="button" data-edition="europe">Europe</button>
+                <button class="edition-btn" type="button" id="editionBtn">Original</button>
               </div>
             </header>
 
@@ -1331,19 +1316,17 @@
             this.resetAll();
           }, { signal: this._ac.signal });
 
-          this.querySelectorAll(".edition-btn").forEach((btn) => {
-            btn.addEventListener("click", () => {
-              this.store.setValue("edition", btn.dataset.edition);
-              this.syncEdition();
-            }, { signal: this._ac.signal });
-          });
+          this.querySelector("#editionBtn")?.addEventListener("click", () => {
+            const current = this.store.getValue("edition") || "original";
+            this.store.setValue("edition", current === "original" ? "europe" : "original");
+            this.syncEdition();
+          }, { signal: this._ac.signal });
         }
 
         syncEdition() {
           const edition = this.store.getValue("edition") || "original";
-          this.querySelectorAll(".edition-btn").forEach((btn) => {
-            btn.classList.toggle("active", btn.dataset.edition === edition);
-          });
+          const btn = this.querySelector("#editionBtn");
+          if (btn) btn.textContent = edition === "original" ? "Original" : "Europe";
           this.querySelectorAll("[data-ref-edition]").forEach((el) => {
             el.style.display = el.dataset.refEdition === edition ? "" : "none";
           });
