@@ -301,7 +301,9 @@
         font-family: var(--font-mono);
         font-size: 13px;
         cursor: pointer;
-        transition: border-color 0.2s, color 0.2s;
+        transition:
+          border-color 0.2s,
+          color 0.2s;
       }
       #cancel-btn:hover {
         border-color: var(--text);
@@ -534,7 +536,7 @@
             ⚠ Server not configured — open Settings and fill in your credentials first.
           </div>
 
-          <div id="status" style="display:none">
+          <div id="status" style="display: none">
             <div class="status-row" id="step-token">
               <div class="status-dot pending"></div>
               <div class="status-text">Authenticating with FreshRSS<small></small></div>
