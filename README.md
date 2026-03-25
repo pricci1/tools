@@ -8,3 +8,4 @@
 | [git-touched](./git-touched) | CLI for listing files touched by commits, ranges, and branches |
 | [Ticket to Ride Scorer](./ticket-to-ride-scorer) | Simple webapp to count points for each player of Ticket to Ride |
 | [Tools Indexer](./tools-indexer) | Scans directories for READMEs with frontmatter and generates a tools index Markdown file |
+| [FeedDrop](./feeddrop) | PWA to unsubscribe from FreshRSS feeds by sharing any article link to the app |

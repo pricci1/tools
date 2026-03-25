@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0d0d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <title>FeedDrop</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0a0a;
+        --surface: #141414;
+        --border: #222;
+        --accent: #c8f060;
+        --accent-dim: rgba(200, 240, 96, 0.12);
+        --red: #ff4f4f;
+        --red-dim: rgba(255, 79, 79, 0.12);
+        --text: #f0f0f0;
+        --muted: #666;
+        --font-head: "Syne", sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      /* ─── Layout ─── */
+      #app {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 20px 24px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .logo {
+        font-family: var(--font-head);
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: -0.5px;
+        color: var(--accent);
+      }
+
+      .logo span {
+        color: var(--text);
+      }
+
+      #settings-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          border-color 0.2s,
+          color 0.2s;
+      }
+      #settings-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      main {
+        flex: 1;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      /* ─── Screens ─── */
+      .screen {
+        display: none;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .screen.active {
+        display: flex;
+      }
+
+      /* ─── Home / idle ─── */
+      #idle-screen {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        flex: 1;
+      }
+
+      .idle-icon {
+        width: 72px;
+        height: 72px;
+        border: 1.5px solid var(--border);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        color: var(--muted);
+      }
+
+      .idle-title {
+        font-family: var(--font-head);
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .idle-sub {
+        color: var(--muted);
+        font-size: 12px;
+        max-width: 260px;
+        margin: 0 auto;
+      }
+
+      /* ─── Share / processing screen ─── */
+      #share-screen {
+      }
+
+      .url-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .url-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .url-value {
+        font-size: 13px;
+        word-break: break-all;
+        color: var(--text);
+      }
+
+      /* ─── Status ─── */
+      #status {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .status-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-top: 5px;
+        flex-shrink: 0;
+        background: var(--border);
+        transition: background 0.3s;
+      }
+      .status-dot.pending {
+        background: var(--muted);
+      }
+      .status-dot.loading {
+        background: var(--accent);
+        animation: pulse 1s infinite;
+      }
+      .status-dot.ok {
+        background: var(--accent);
+      }
+      .status-dot.error {
+        background: var(--red);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      .status-text {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .status-text small {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+        word-break: break-all;
+      }
+
+      /* ─── Result banner ─── */
+      #result-banner {
+        border-radius: 12px;
+        padding: 16px 20px;
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 16px;
+        display: none;
+      }
+      #result-banner.success {
+        display: block;
+        background: var(--accent-dim);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+      }
+      #result-banner.failure {
+        display: block;
+        background: var(--red-dim);
+        border: 1px solid var(--red);
+        color: var(--red);
+      }
+
+      #retry-btn {
+        display: none;
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+      #retry-btn:hover {
+        border-color: var(--accent);
+      }
+
+      /* ─── Settings screen ─── */
+      #settings-screen {
+        gap: 16px;
+      }
+
+      .settings-title {
+        font-family: var(--font-head);
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+
+      input {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+        width: 100%;
+      }
+      input:focus {
+        border-color: var(--accent);
+      }
+      input::placeholder {
+        color: var(--muted);
+      }
+
+      .field-hint {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .save-btn {
+        background: var(--accent);
+        color: var(--bg);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        width: 100%;
+      }
+      .save-btn:hover {
+        opacity: 0.85;
+      }
+
+      #save-confirm {
+        text-align: center;
+        font-size: 12px;
+        color: var(--accent);
+        height: 16px;
+        transition: opacity 0.3s;
+      }
+
+      .divider {
+        border: none;
+        border-top: 1px solid var(--border);
+      }
+
+      .back-link {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+        text-align: left;
+      }
+      .back-link:hover {
+        color: var(--text);
+      }
+
+      /* ─── Unconfigured warning ─── */
+      #unconfigured {
+        background: var(--red-dim);
+        border: 1px solid var(--red);
+        border-radius: 10px;
+        padding: 14px 16px;
+        color: var(--red);
+        font-size: 12px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="logo">Feed<span>Drop</span></div>
+        <button id="settings-btn" title="Settings" onclick="showSettings()">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <main>
+        <!-- Idle -->
+        <div id="idle-screen" class="screen active">
+          <div>
+            <div class="idle-icon">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M4 11a9 9 0 0 1 9 9" />
+                <path d="M4 4a16 16 0 0 1 16 16" />
+                <circle cx="5" cy="19" r="1" />
+              </svg>
+            </div>
+            <div class="idle-title">Share a link to unsubscribe</div>
+            <p class="idle-sub">
+              Use the browser share menu, pick FeedDrop, and the feed will be removed from your
+              FreshRSS server.
+            </p>
+          </div>
+        </div>
+
+        <!-- Share processing -->
+        <div id="share-screen" class="screen">
+          <div class="url-card">
+            <div class="url-label">Shared URL</div>
+            <div class="url-value" id="display-url">—</div>
+          </div>
+
+          <div id="unconfigured">
+            ⚠ Server not configured — open Settings and fill in your credentials first.
+          </div>
+
+          <div id="status">
+            <div class="status-row" id="step-token">
+              <div class="status-dot pending"></div>
+              <div class="status-text">Authenticating with FreshRSS<small></small></div>
+            </div>
+            <div class="status-row" id="step-feeds">
+              <div class="status-dot pending"></div>
+              <div class="status-text">Finding matching subscription<small></small></div>
+            </div>
+            <div class="status-row" id="step-unsub">
+              <div class="status-dot pending"></div>
+              <div class="status-text">Unsubscribing from feed<small></small></div>
+            </div>
+          </div>
+
+          <div id="result-banner"></div>
+          <button id="retry-btn" onclick="retryLast()">Try again</button>
+        </div>
+
+        <!-- Settings -->
+        <div id="settings-screen" class="screen">
+          <div class="settings-title">Settings</div>
+
+          <div class="field">
+            <label for="inp-server">FreshRSS Server URL</label>
+            <input
+              id="inp-server"
+              type="url"
+              placeholder="https://rss.example.com"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <span class="field-hint">Base URL of your FreshRSS instance</span>
+          </div>
+
+          <div class="field">
+            <label for="inp-user">Username</label>
+            <input
+              id="inp-user"
+              type="text"
+              placeholder="alice"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <div class="field">
+            <label for="inp-key">API Password</label>
+            <input id="inp-key" type="password" placeholder="••••••••••••" autocomplete="off" />
+            <span class="field-hint"
+              >The API-specific password set in your FreshRSS profile (not your login
+              password)</span
+            >
+          </div>
+
+          <button class="save-btn" onclick="saveSettings()">Save settings</button>
+          <div id="save-confirm"></div>
+
+          <hr class="divider" />
+          <button class="back-link" onclick="showIdle()">← Back</button>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // ─── Settings persistence ───────────────────────────────────────────────────
+      function getSettings() {
+        return {
+          server: localStorage.getItem("fd_server") || "",
+          user: localStorage.getItem("fd_user") || "",
+          key: localStorage.getItem("fd_key") || "",
+        };
+      }
+
+      function saveSettings() {
+        const server = document.getElementById("inp-server").value.trim().replace(/\/$/, "");
+        const user = document.getElementById("inp-user").value.trim();
+        const key = document.getElementById("inp-key").value.trim();
+        localStorage.setItem("fd_server", server);
+        localStorage.setItem("fd_user", user);
+        localStorage.setItem("fd_key", key);
+        const el = document.getElementById("save-confirm");
+        el.textContent = "✓ Saved";
+        setTimeout(() => (el.textContent = ""), 2000);
+      }
+
+      function loadSettingsForm() {
+        const s = getSettings();
+        document.getElementById("inp-server").value = s.server;
+        document.getElementById("inp-user").value = s.user;
+        document.getElementById("inp-key").value = s.key;
+      }
+
+      // ─── Screen routing ──────────────────────────────────────────────────────────
+      function showScreen(id) {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+      }
+      function showIdle() {
+        showScreen("idle-screen");
+      }
+      function showSettings() {
+        loadSettingsForm();
+        showScreen("settings-screen");
+      }
+
+      // ─── Step status helpers ──────────────────────────────────────────────────────
+      function setStep(id, state, detail = "") {
+        const row = document.getElementById(id);
+        const dot = row.querySelector(".status-dot");
+        const text = row.querySelector(".status-text small");
+        dot.className = "status-dot " + state;
+        text.textContent = detail;
+      }
+
+      // ─── FreshRSS GReader API ────────────────────────────────────────────────────
+      async function frLogin(server, user, key) {
+        const url = `${server}/api/greader.php/accounts/ClientLogin`;
+        const body = new URLSearchParams({ Email: user, Passwd: key });
+        const res = await fetch(url, { method: "POST", body });
+        if (!res.ok) throw new Error(`Login failed (HTTP ${res.status})`);
+        const text = await res.text();
+        const match = text.match(/Auth=(.+)/);
+        if (!match) throw new Error("No auth token in response");
+        return match[1].trim();
+      }
+
+      async function frGetToken(server, auth) {
+        const res = await fetch(`${server}/api/greader.php/reader/api/0/token`, {
+          headers: { Authorization: `GoogleLogin auth=${auth}` },
+        });
+        if (!res.ok) throw new Error(`Token fetch failed (HTTP ${res.status})`);
+        return (await res.text()).trim();
+      }
+
+      async function frListFeeds(server, auth) {
+        const res = await fetch(
+          `${server}/api/greader.php/reader/api/0/subscription/list?output=json`,
+          {
+            headers: { Authorization: `GoogleLogin auth=${auth}` },
+          },
+        );
+        if (!res.ok) throw new Error(`Feed list failed (HTTP ${res.status})`);
+        const json = await res.json();
+        return json.subscriptions || [];
+      }
+
+      async function frUnsubscribe(server, auth, token, streamId) {
+        const body = new URLSearchParams({ ac: "unsubscribe", s: streamId, T: token });
+        const res = await fetch(`${server}/api/greader.php/reader/api/0/subscription/edit`, {
+          method: "POST",
+          headers: { Authorization: `GoogleLogin auth=${auth}` },
+          body,
+        });
+        if (!res.ok) throw new Error(`Unsubscribe failed (HTTP ${res.status})`);
+        const text = await res.text();
+        if (!text.includes("OK")) throw new Error(`Unexpected response: ${text}`);
+      }
+
+      // ─── Core unsubscribe flow ───────────────────────────────────────────────────
+      let lastSharedUrl = null;
+
+      async function runUnsub(sharedUrl) {
+        const { server, user, key } = getSettings();
+
+        // Reset UI
+        document.getElementById("result-banner").className = "";
+        document.getElementById("result-banner").textContent = "";
+        document.getElementById("retry-btn").style.display = "none";
+        document.getElementById("unconfigured").style.display = "none";
+        ["step-token", "step-feeds", "step-unsub"].forEach((id) => setStep(id, "pending"));
+
+        if (!server || !user || !key) {
+          document.getElementById("unconfigured").style.display = "block";
+          return;
+        }
+
+        const sharedHost = (() => {
+          try {
+            return new URL(sharedUrl).hostname;
+          } catch {
+            return null;
+          }
+        })();
+
+        // Step 1 – auth
+        setStep("step-token", "loading");
+        let auth, postToken;
+        try {
+          auth = await frLogin(server, user, key);
+          postToken = await frGetToken(server, auth);
+          setStep("step-token", "ok", `Authenticated as ${user}`);
+        } catch (e) {
+          setStep("step-token", "error", e.message);
+          showResult(false, `Authentication failed: ${e.message}`);
+          return;
+        }
+
+        // Step 2 – find feed
+        setStep("step-feeds", "loading");
+        let feeds, match;
+        try {
+          feeds = await frListFeeds(server, auth);
+          // Match by hostname of the shared URL against the feed URL
+          match = feeds.find((f) => {
+            try {
+              const feedHost = new URL(f.url).hostname;
+              return sharedHost && feedHost === sharedHost;
+            } catch {
+              return false;
+            }
+          });
+          if (!match) {
+            // Fallback: try htmlUrl
+            match = feeds.find((f) => {
+              try {
+                const feedHost = new URL(f.htmlUrl || "").hostname;
+                return sharedHost && feedHost === sharedHost;
+              } catch {
+                return false;
+              }
+            });
+          }
+          if (!match)
+            throw new Error(
+              `No subscription found matching "${sharedHost}" (${feeds.length} feeds checked)`,
+            );
+          setStep("step-feeds", "ok", `Found: ${match.title || match.id}`);
+        } catch (e) {
+          setStep("step-feeds", "error", e.message);
+          showResult(false, e.message);
+          return;
+        }
+
+        // Step 3 – unsubscribe
+        setStep("step-unsub", "loading");
+        try {
+          await frUnsubscribe(server, auth, postToken, match.id);
+          setStep("step-unsub", "ok", `Removed from server`);
+          showResult(true, `Unsubscribed from "${match.title || sharedHost}"`);
+        } catch (e) {
+          setStep("step-unsub", "error", e.message);
+          showResult(false, `Unsubscribe failed: ${e.message}`);
+        }
+      }
+
+      function showResult(ok, msg) {
+        const el = document.getElementById("result-banner");
+        el.className = ok ? "success" : "failure";
+        el.textContent = ok ? `✓ ${msg}` : `✗ ${msg}`;
+        if (!ok) document.getElementById("retry-btn").style.display = "block";
+      }
+
+      function retryLast() {
+        if (lastSharedUrl) runUnsub(lastSharedUrl);
+      }
+
+      // ─── Incoming share handling ─────────────────────────────────────────────────
+      function handleIncomingShare() {
+        const params = new URLSearchParams(window.location.search);
+        // The manifest maps: ?url=…&text=…&title=…
+        let sharedUrl = params.get("url") || params.get("text") || params.get("title") || "";
+        sharedUrl = sharedUrl.trim();
+        if (!sharedUrl) return;
+
+        // Sometimes Android puts the URL in `text` field; extract it
+        if (!sharedUrl.startsWith("http")) {
+          const m = sharedUrl.match(/https?:\/\/\S+/);
+          sharedUrl = m ? m[0] : sharedUrl;
+        }
+
+        lastSharedUrl = sharedUrl;
+        document.getElementById("display-url").textContent = sharedUrl;
+        showScreen("share-screen");
+        runUnsub(sharedUrl);
+      }
+
+      // ─── Boot ────────────────────────────────────────────────────────────────────
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").catch(console.error);
+      }
+
+      window.addEventListener("DOMContentLoaded", handleIncomingShare);
+    </script>
+  </body>
+</html>
