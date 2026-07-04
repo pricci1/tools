@@ -4,20 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ticket to Ride — Score Tracker</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap"
-      rel="stylesheet"
-    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#1c1c1c" />
     <style>
       :root {
-        --cream: #f5efe3;
-        --dark: #1a1208;
-        --brown: #5c3d1e;
-        --rust: #c0392b;
-        --gold: #d4a017;
-        --green: #27623a;
-        --card-bg: #fdf8f0;
-        --border: #c9b08a;
+        --bg: oklch(0.13 0 0);
+        --surface: oklch(0.18 0.006 220);
+        --surface-2: oklch(0.23 0.008 220);
+        --border: oklch(0.32 0.01 220);
+        --ink: oklch(0.95 0.005 220);
+        --muted: oklch(0.74 0.015 220);
+        --primary: oklch(0.8 0.12 200);
+        --primary-hover: oklch(0.85 0.12 200);
+        --primary-ink: oklch(0.16 0.02 200);
+        --accent: oklch(0.83 0.13 85);
+        --danger: oklch(0.68 0.17 25);
+        --radius-card: 12px;
+        --radius-control: 10px;
+        --tap: 44px;
+        --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       }
 
       * {
@@ -27,138 +32,148 @@
       }
 
       body {
-        background: var(--cream);
-        color: var(--dark);
-        font-family: "Crimson Pro", serif;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font);
         min-height: 100vh;
-        background-image:
-          radial-gradient(
-            ellipse at 20% 80%,
-            rgba(92, 61, 30, 0.08) 0%,
-            transparent 50%
-          ),
-          radial-gradient(
-            ellipse at 80% 20%,
-            rgba(192, 57, 43, 0.06) 0%,
-            transparent 50%
-          );
+        line-height: 1.4;
+      }
+
+      button,
+      input,
+      select {
+        font-family: inherit;
       }
 
       header {
-        text-align: center;
-        padding: 2rem 1rem 1rem;
-        border-bottom: 2px solid var(--border);
-        background: var(--card-bg);
-        box-shadow: 0 2px 12px rgba(92, 61, 30, 0.1);
-        position: relative;
-        overflow: hidden;
-      }
-
-      header::before {
-        content: "🚂";
-        position: absolute;
-        font-size: 8rem;
-        opacity: 0.04;
-        right: 5%;
-        top: -10px;
-        transform: rotate(-10deg);
-        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
       }
 
       header h1 {
-        font-family: "Playfair Display", serif;
-        font-size: clamp(1.8rem, 5vw, 3rem);
-        font-weight: 900;
-        letter-spacing: 0.02em;
-        color: var(--brown);
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
       }
 
       header p {
-        font-style: italic;
-        color: var(--rust);
-        font-size: 1.1rem;
-        margin-top: 0.25rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .header-title {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+      }
+
+      .train {
+        display: inline-flex;
+        gap: 3px;
+        align-self: center;
+      }
+
+      .train i {
+        width: 16px;
+        height: 11px;
+        border-radius: 3px 3px 2px 2px;
+      }
+
+      .train i:nth-child(1) {
+        background: oklch(0.62 0.19 25);
+        border-radius: 6px 3px 2px 2px;
+      }
+      .train i:nth-child(2) {
+        background: oklch(0.82 0.16 90);
+      }
+      .train i:nth-child(3) {
+        background: oklch(0.62 0.14 250);
       }
 
       .controls {
         display: flex;
-        gap: 0.75rem;
-        justify-content: center;
-        padding: 1.25rem 1rem;
+        gap: 0.6rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1rem 0.75rem;
         flex-wrap: wrap;
-        background: var(--dark);
       }
 
       .btn {
-        font-family: "Crimson Pro", serif;
-        font-size: 1rem;
-        padding: 0.5rem 1.25rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        min-height: var(--tap);
+        padding: 0.5rem 1.1rem;
         border: none;
-        border-radius: 4px;
+        border-radius: var(--radius-control);
         cursor: pointer;
-        transition: all 0.15s;
-        letter-spacing: 0.03em;
+        transition:
+          background 0.15s ease-out,
+          color 0.15s ease-out;
+      }
+
+      .btn:focus-visible,
+      .route-adjust:focus-visible,
+      .special-input:focus-visible,
+      .edition-btn:focus-visible,
+      .btn-remove-player:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
       }
 
       .btn-primary {
-        background: var(--gold);
-        color: var(--dark);
-        font-weight: 400;
+        background: var(--primary);
+        color: var(--primary-ink);
       }
       .btn-primary:hover {
-        background: #e6b020;
-        transform: translateY(-1px);
+        background: var(--primary-hover);
       }
-
-      .btn-danger {
-        background: var(--rust);
-        color: white;
-      }
-      .btn-danger:hover {
-        background: #a93226;
+      .btn-primary:active {
+        background: oklch(0.75 0.12 200);
       }
 
       .btn-ghost {
         background: transparent;
-        color: var(--cream);
-        border: 1px solid rgba(245, 239, 227, 0.3);
+        color: var(--muted);
+        border: 1px solid var(--border);
       }
       .btn-ghost:hover {
-        background: rgba(245, 239, 227, 0.1);
-      }
-
-      .btn-sm {
-        font-size: 0.85rem;
-        padding: 0.3rem 0.75rem;
+        color: var(--ink);
+        border-color: var(--muted);
       }
 
       main {
         max-width: 1200px;
         margin: 0 auto;
-        padding: 1.5rem 1rem 4rem;
+        padding: 0.5rem 1rem 4rem;
       }
 
       /* Players grid */
       .players-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.25rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
       }
 
       .player-card {
-        background: var(--card-bg);
-        border: 1.5px solid var(--border);
-        border-radius: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(92, 61, 30, 0.08);
-        animation: slideIn 0.3s ease;
+        animation: slideIn 0.2s ease-out;
       }
 
       @keyframes slideIn {
         from {
           opacity: 0;
-          transform: translateY(12px);
+          transform: translateY(8px);
         }
         to {
           opacity: 1;
@@ -166,74 +181,94 @@
         }
       }
 
+      @media (prefers-reduced-motion: reduce) {
+        .player-card {
+          animation: none;
+        }
+        * {
+          transition-duration: 0.01ms !important;
+        }
+      }
+
       .player-header {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.85rem 1rem;
+        gap: 0.65rem;
+        padding: 0.75rem 0.9rem;
         border-bottom: 1px solid var(--border);
+        background: color-mix(
+          in oklab,
+          var(--player-color, var(--surface-2)) 14%,
+          var(--surface-2)
+        );
       }
 
       .player-color-dot {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        border: 2px solid rgba(0, 0, 0, 0.15);
+        width: 24px;
+        height: 14px;
+        border-radius: 4px;
+        border: 1px solid oklch(1 0 0 / 0.3);
         flex-shrink: 0;
       }
 
       .player-name-input {
-        font-family: "Playfair Display", serif;
-        font-size: 1.15rem;
-        font-weight: 700;
+        font-size: 1.05rem;
+        font-weight: 600;
         background: transparent;
         border: none;
-        border-bottom: 1px dashed transparent;
-        color: var(--dark);
+        border-radius: 6px;
+        color: var(--ink);
         flex: 1;
         min-width: 0;
-        padding: 2px 0;
-        transition: border-color 0.2s;
+        padding: 0.4rem 0.4rem;
+        margin: -0.4rem 0;
+      }
+      .player-name-input::placeholder {
+        color: var(--muted);
       }
       .player-name-input:focus {
         outline: none;
-        border-bottom-color: var(--gold);
+        background: oklch(1 0 0 / 0.07);
       }
 
       .player-total {
-        font-family: "Playfair Display", serif;
-        font-size: 1.6rem;
-        font-weight: 900;
-        color: var(--rust);
-        min-width: 48px;
+        font-size: 1.5rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: var(--primary);
+        min-width: 2.5ch;
         text-align: right;
       }
 
       .btn-remove-player {
         background: none;
         border: none;
-        color: var(--border);
+        color: var(--muted);
         cursor: pointer;
-        font-size: 1.1rem;
-        padding: 2px 4px;
-        transition: color 0.15s;
+        font-size: 1rem;
+        width: 36px;
+        height: 36px;
+        margin: -0.3rem -0.4rem -0.3rem 0;
+        border-radius: 8px;
+        transition:
+          color 0.15s ease-out,
+          background 0.15s ease-out;
         line-height: 1;
       }
       .btn-remove-player:hover {
-        color: var(--rust);
+        color: var(--danger);
+        background: oklch(1 0 0 / 0.06);
       }
 
       .score-section {
-        padding: 0.75rem 1rem;
+        padding: 0.75rem 0.9rem;
       }
 
       .score-section-title {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: var(--brown);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--muted);
         margin-bottom: 0.5rem;
-        font-style: italic;
       }
 
       /* Route rows */
@@ -246,81 +281,114 @@
       .route-row {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        background: rgba(92, 61, 30, 0.04);
-        border-radius: 4px;
-        padding: 4px 6px;
+        gap: 0.6rem;
+        border-radius: 8px;
+        padding: 2px 0;
       }
 
       .route-row.inactive {
-        opacity: 0.35;
-        pointer-events: none;
+        display: none;
       }
 
-      .route-len-btn {
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        border: 1.5px solid var(--border);
-        background: var(--cream);
-        color: var(--brown);
-        font-family: "Playfair Display", serif;
-        font-weight: 700;
-        font-size: 0.85rem;
-        cursor: default;
-        transition: all 0.12s;
-        display: flex;
+      .route-len-badge {
+        width: 1.65rem;
+        height: 1.65rem;
+        border-radius: 7px;
+        background: var(--surface-2);
+        color: var(--ink);
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        font-size: 0.9rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        border: 1px solid var(--border);
+      }
+
+      .route-cars {
+        display: inline-flex;
+        gap: 2px;
+        flex-shrink: 0;
+        width: calc(8 * 9px + 7 * 2px);
+      }
+
+      .route-cars i {
+        width: 9px;
+        height: 15px;
+        border-radius: 3px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        transition:
+          background 0.15s ease-out,
+          border-color 0.15s ease-out;
+      }
+
+      .route-row.claimed .route-cars i {
+        background: var(--player-color, var(--primary));
+        border-color: oklch(1 0 0 / 0.25);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
       }
 
       .route-pts {
-        font-size: 0.8rem;
-        color: #666;
-        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--muted);
         flex: 1;
       }
 
       .route-pts strong {
-        color: var(--green);
-        font-style: normal;
+        color: var(--ink);
+        font-weight: 600;
       }
 
       .route-counter {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.25rem;
       }
 
       .route-count {
-        min-width: 2ch;
+        min-width: 2.2ch;
         text-align: center;
-        font-family: "Playfair Display", serif;
         font-size: 1rem;
-        color: var(--dark);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
       }
 
       .route-adjust {
-        width: 22px;
-        height: 22px;
+        width: var(--tap);
+        height: 38px;
         border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--cream);
-        color: var(--brown);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--ink);
         cursor: pointer;
         line-height: 1;
-        font-size: 1rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        transition: background 0.15s ease-out;
       }
 
-      .route-adjust:hover {
-        background: var(--gold);
-        border-color: var(--gold);
-        color: var(--dark);
+      .route-adjust:hover:not(:disabled) {
+        background: var(--border);
+      }
+      .route-adjust:active:not(:disabled) {
+        background: var(--primary);
+        color: var(--primary-ink);
+        border-color: var(--primary);
       }
 
       .route-adjust:disabled {
-        opacity: 0.45;
+        opacity: 0.35;
         cursor: not-allowed;
       }
 
@@ -328,365 +396,298 @@
       .special-scores {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        gap: 0.6rem;
       }
 
       .special-field {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
       }
 
       .special-field label {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--brown);
-        font-style: italic;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--muted);
       }
 
       .special-input {
-        font-family: "Playfair Display", serif;
         font-size: 1rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
         width: 100%;
-        padding: 4px 8px;
-        border: 1.5px solid var(--border);
-        border-radius: 4px;
-        background: var(--cream);
-        color: var(--dark);
+        min-height: var(--tap);
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--ink);
         text-align: center;
       }
       .special-input:focus {
         outline: none;
-        border-color: var(--gold);
+        border-color: var(--primary);
+      }
+
+      select.special-input {
+        appearance: none;
+        text-align: center;
+      }
+
+      button.special-input {
+        cursor: pointer;
       }
 
       /* Divider */
       .section-divider {
         border: none;
         border-top: 1px solid var(--border);
-        margin: 0.6rem 0;
+        margin: 0;
       }
 
       /* Score breakdown */
       .score-breakdown {
-        font-size: 0.8rem;
-        color: #777;
-        font-style: italic;
-        padding: 0 1rem 0.6rem;
+        font-size: 0.82rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        padding: 0 0.9rem 0.75rem;
+      }
+
+      .score-breakdown strong {
+        color: var(--ink);
       }
 
       /* Scoreboard */
       .scoreboard {
-        background: var(--dark);
-        color: var(--cream);
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-top: 2rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 1rem 1.1rem 0.5rem;
+        margin-top: 1.5rem;
       }
 
       .scoreboard h2 {
-        font-family: "Playfair Display", serif;
-        font-size: 1.4rem;
-        color: var(--gold);
-        margin-bottom: 1rem;
-        border-bottom: 1px solid rgba(212, 160, 23, 0.3);
-        padding-bottom: 0.5rem;
-        letter-spacing: 0.05em;
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
       }
 
       .scoreboard-row {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(245, 239, 227, 0.08);
-        transition: all 0.3s;
+        gap: 0.75rem;
+        padding: 0.6rem 0;
+        border-top: 2px dashed var(--border);
       }
 
       .rank {
-        font-family: "Playfair Display", serif;
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: rgba(212, 160, 23, 0.4);
-        min-width: 2rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        min-width: 1.4rem;
       }
 
-      .scoreboard-row.rank-1 .rank {
-        color: var(--gold);
-      }
-      .scoreboard-row.rank-1 {
-        background: rgba(212, 160, 23, 0.08);
-        border-radius: 4px;
-        padding-left: 0.5rem;
+      .scoreboard-row.rank-1 .rank,
+      .scoreboard-row.rank-1 .sb-score {
+        color: var(--accent);
       }
 
       .sb-name {
         flex: 1;
-        font-size: 1.1rem;
-        font-weight: 300;
+        font-size: 1rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .sb-details {
         font-size: 0.78rem;
-        color: rgba(245, 239, 227, 0.45);
-        font-style: italic;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
       }
 
       .sb-score {
-        font-family: "Playfair Display", serif;
-        font-size: 1.8rem;
-        font-weight: 900;
-        color: var(--rust);
-      }
-
-      .scoreboard-row.rank-1 .sb-score {
-        color: var(--gold);
+        font-size: 1.35rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
+        min-width: 2.5ch;
+        text-align: right;
       }
 
       /* Empty state */
       .empty-state {
         text-align: center;
         padding: 3rem 1rem;
-        color: var(--brown);
-        font-style: italic;
-        opacity: 0.6;
+        color: var(--muted);
       }
 
       /* Route points table */
       .points-ref {
-        background: var(--card-bg);
-        border: 1.5px solid var(--border);
-        border-radius: 8px;
-        padding: 1rem 1.25rem;
-        margin-top: 1.5rem;
-        font-size: 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 0.9rem 1.1rem;
+        margin-top: 1rem;
+        font-size: 0.85rem;
       }
 
       .points-ref h3 {
-        font-family: "Playfair Display", serif;
-        font-size: 1rem;
-        color: var(--brown);
-        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 0.6rem;
       }
 
       .ref-table {
         display: flex;
-        gap: 1.5rem;
+        gap: 0.5rem 1.25rem;
         flex-wrap: wrap;
       }
 
       .ref-item {
         display: flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.35rem;
+        font-variant-numeric: tabular-nums;
       }
 
       .ref-len {
-        font-family: "Playfair Display", serif;
         font-weight: 700;
-        font-size: 1rem;
-        color: var(--dark);
-        min-width: 1.5rem;
+        color: var(--ink);
+        background: var(--surface-2);
+        border-radius: 6px;
+        width: 1.6rem;
+        height: 1.6rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .ref-pts {
-        color: var(--green);
-        font-style: italic;
+        color: var(--muted);
       }
 
       /* Edition toggle */
       .edition-toggle {
         display: flex;
-        gap: 0;
-        justify-content: center;
-        margin-top: 0.6rem;
       }
 
       .edition-btn {
-        font-family: "Crimson Pro", serif;
         font-size: 0.9rem;
-        padding: 0;
-        border: 1.5px solid var(--gold);
-        border-radius: 20px;
-        background: transparent;
+        font-weight: 600;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-control);
+        background: var(--surface);
         cursor: pointer;
-        letter-spacing: 0.05em;
         display: inline-flex;
-        overflow: hidden;
+        gap: 2px;
       }
 
       .edition-btn span {
-        padding: 0.3rem 1rem;
-        color: var(--brown);
-        transition: all 0.15s;
+        padding: 0.45rem 0.9rem;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 7px;
+        color: var(--muted);
+        transition:
+          background 0.15s ease-out,
+          color 0.15s ease-out;
       }
 
       .edition-btn span.active {
-        background: var(--gold);
-        color: var(--dark);
-        font-weight: 600;
+        background: var(--primary);
+        color: var(--primary-ink);
       }
 
       .edition-btn:hover span:not(.active) {
-        background: rgba(212, 160, 23, 0.12);
+        color: var(--ink);
       }
 
       /* Station control */
       .station-control {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.25rem;
+        min-height: var(--tap);
       }
 
       .station-count {
-        min-width: 3ch;
+        min-width: 3.2ch;
         text-align: center;
-        font-family: "Playfair Display", serif;
         font-size: 1rem;
-        color: var(--dark);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
       }
 
       .station-pts {
-        font-size: 0.8rem;
-        color: var(--green);
-        font-style: italic;
+        font-size: 1rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--tap);
       }
 
       @media (max-width: 720px) {
         header {
-          padding: 1.5rem 0.85rem 0.9rem;
+          padding: 0.85rem 1rem;
         }
 
         .controls {
-          padding: 0.85rem;
-          gap: 0.6rem;
           display: grid;
           grid-template-columns: 1fr 1fr;
         }
 
-        .btn,
-        .btn-sm {
-          min-height: 44px;
-          padding: 0.65rem 0.9rem;
-          font-size: 1rem;
-        }
-
         main {
-          padding: 1rem 0.75rem 3rem;
+          padding: 0.25rem 0.75rem 3rem;
         }
 
         .players-grid {
           grid-template-columns: 1fr;
-          gap: 1rem;
-        }
-
-        .player-header {
-          padding: 0.9rem 0.9rem;
-          gap: 0.6rem;
-        }
-
-        .player-color-dot {
-          width: 20px;
-          height: 20px;
-        }
-
-        .player-name-input {
-          font-size: 1.1rem;
-          padding: 0.45rem 0;
         }
 
         .btn-remove-player {
-          width: 44px;
-          height: 44px;
-          font-size: 1.35rem;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          margin-right: -0.2rem;
-        }
-
-        .score-section {
-          padding: 0.8rem 0.9rem;
-        }
-
-        .route-row {
-          gap: 0.7rem;
-          padding: 0.5rem 0.55rem;
-        }
-
-        .route-len-btn {
-          width: 34px;
-          height: 34px;
-          font-size: 1rem;
-        }
-
-        .route-pts {
-          font-size: 0.9rem;
-        }
-
-        .route-counter {
-          gap: 0.4rem;
+          width: var(--tap);
+          height: var(--tap);
+          font-size: 1.15rem;
         }
 
         .route-adjust {
-          width: 34px;
-          height: 34px;
-          font-size: 1.2rem;
+          height: var(--tap);
         }
 
         .special-scores {
-          grid-template-columns: 1fr;
-          gap: 0.55rem;
-        }
-
-        .special-field {
-          gap: 0.25rem;
-        }
-
-        .special-input {
-          min-height: 44px;
-          padding: 0.55rem 0.65rem;
-          font-size: 1rem;
-        }
-
-        .scoreboard {
-          padding: 1rem 0.9rem;
-        }
-
-        .scoreboard-row {
-          gap: 0.75rem;
-          padding: 0.65rem 0;
-        }
-
-        .sb-name {
-          font-size: 1rem;
-        }
-
-        .sb-score {
-          font-size: 1.6rem;
-        }
-
-        .points-ref {
-          padding: 0.85rem 0.9rem;
-        }
-
-        .ref-table {
-          gap: 0.8rem 1.2rem;
+          gap: 0.5rem;
         }
       }
 
       @media (max-width: 420px) {
-        .controls {
-          grid-template-columns: 1fr;
+        header {
+          flex-direction: column;
+          align-items: stretch;
         }
 
-        .route-row {
-          gap: 0.55rem;
+        .header-title {
+          justify-content: space-between;
         }
 
-        .route-pts {
-          font-size: 0.82rem;
+        .edition-toggle {
+          justify-content: stretch;
+        }
+
+        .edition-btn {
+          flex: 1;
+        }
+
+        .edition-btn span {
+          flex: 1;
+          justify-content: center;
         }
       }
     </style>
@@ -708,14 +709,7 @@
       import { createCustomPersister } from "tinybase/persisters";
 
       const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 8: 21 };
-      const PLAYER_COLORS = [
-        "#2980b9",
-        "#e74c3c",
-        "#2c3e50",
-        "#f1c40f",
-        "#27ae60",
-        "#ecf0f1",
-      ];
+      const PLAYER_COLORS = ["#2980b9", "#e74c3c", "#2c3e50", "#f1c40f", "#27ae60", "#ecf0f1"];
       const URL_STATE_KEY = "s";
       const VALUES_SCHEMA = {
         nextPlayerId: { type: "number", default: 1 },
@@ -781,31 +775,57 @@
       }
 
       class OriginalScorer {
-        get validLens() { return [1, 2, 3, 4, 5, 6]; }
-        get hasStations() { return false; }
-        stationBonus(_stationsUsed) { return 0; }
+        get validLens() {
+          return [1, 2, 3, 4, 5, 6];
+        }
+        get hasStations() {
+          return false;
+        }
+        stationBonus(_stationsUsed) {
+          return 0;
+        }
         calcRoutePoints(routes) {
-          return routes.reduce((sum, len) => sum + (this.validLens.includes(len) ? (ROUTE_POINTS[len] || 0) : 0), 0);
+          return routes.reduce(
+            (sum, len) => sum + (this.validLens.includes(len) ? ROUTE_POINTS[len] || 0 : 0),
+            0,
+          );
         }
         calcTotal(p) {
-          return this.calcRoutePoints(p.routes) + Number(p.destinationPoints || 0) + (p.longestRoute ? 10 : 0);
+          return (
+            this.calcRoutePoints(p.routes) +
+            Number(p.destinationPoints || 0) +
+            (p.longestRoute ? 10 : 0)
+          );
         }
       }
 
       class EuropeScorer {
-        get validLens() { return [1, 2, 3, 4, 6, 8]; }
-        get hasStations() { return true; }
-        stationBonus(stationsUsed) { return (3 - stationsUsed) * 4; }
+        get validLens() {
+          return [1, 2, 3, 4, 6, 8];
+        }
+        get hasStations() {
+          return true;
+        }
+        stationBonus(stationsUsed) {
+          return (3 - stationsUsed) * 4;
+        }
         calcRoutePoints(routes) {
-          return routes.reduce((sum, len) => sum + (this.validLens.includes(len) ? (ROUTE_POINTS[len] || 0) : 0), 0);
+          return routes.reduce(
+            (sum, len) => sum + (this.validLens.includes(len) ? ROUTE_POINTS[len] || 0 : 0),
+            0,
+          );
         }
         calcTotal(p) {
-          return this.calcRoutePoints(p.routes) + Number(p.destinationPoints || 0) + (p.longestRoute ? 10 : 0) + this.stationBonus(p.stationsUsed || 0);
+          return (
+            this.calcRoutePoints(p.routes) +
+            Number(p.destinationPoints || 0) +
+            (p.longestRoute ? 10 : 0) +
+            this.stationBonus(p.stationsUsed || 0)
+          );
         }
       }
 
       const SCORERS = { original: new OriginalScorer(), europe: new EuropeScorer() };
-
 
       class TTRPlayerCard extends HTMLElement {
         set player(data) {
@@ -861,8 +881,9 @@
                   .map(
                     (len) => `
                       <div class="route-row" data-route-edition="${len === 5 ? "original" : len === 8 ? "europe" : "both"}">
-                        <span class="route-len-btn">${len}</span>
-                        <span class="route-pts">${len} cars → <strong>${ROUTE_POINTS[len]} pts</strong></span>
+                        <span class="route-len-badge" aria-hidden="true">${len}</span>
+                        <span class="route-cars" aria-hidden="true">${"<i></i>".repeat(len)}</span>
+                        <span class="route-pts"><span class="sr-only">${len} car route: </span><strong>${ROUTE_POINTS[len]} pt${ROUTE_POINTS[len] > 1 ? "s" : ""}</strong></span>
                         <div class="route-counter">
                           <button class="route-adjust" type="button" data-route-len="${len}" data-route-delta="-1" disabled>-</button>
                           <span class="route-count" data-route-len="${len}">0</span>
@@ -885,10 +906,7 @@
                 </div>
                 <div class="special-field">
                   <label>Longest Route +10</label>
-                  <select class="special-input longest-select">
-                    <option value="false">No</option>
-                    <option value="true">Yes (+10)</option>
-                  </select>
+                  <button type="button" class="special-input longest-select" aria-pressed="false">No</button>
                 </div>
               </div>
             </div>
@@ -931,8 +949,12 @@
           for (const len of [1, 2, 3, 4, 5, 6, 8]) {
             this._routeRefs[len] = {
               count: this.querySelector(`.route-count[data-route-len="${len}"]`),
-              minus: this.querySelector(`.route-adjust[data-route-len="${len}"][data-route-delta="-1"]`),
-              plus: this.querySelector(`.route-adjust[data-route-len="${len}"][data-route-delta="1"]`),
+              minus: this.querySelector(
+                `.route-adjust[data-route-len="${len}"][data-route-delta="-1"]`,
+              ),
+              plus: this.querySelector(
+                `.route-adjust[data-route-len="${len}"][data-route-delta="1"]`,
+              ),
             };
           }
         }
@@ -969,8 +991,8 @@
             });
           });
 
-          this._longestSelect.addEventListener("change", (event) => {
-            const longestRoute = event.target.value === "true";
+          this._longestSelect.addEventListener("click", () => {
+            const longestRoute = !this._player.longestRoute;
             this._player.longestRoute = longestRoute;
             this.updateScoreDisplay();
             this.emit("longest-route-change", {
@@ -983,9 +1005,15 @@
             if (!this._player) return;
             const current = this._player.stationsUsed || 0;
             if (e.target.closest(".station-dec") && current > 0) {
-              this.emit("station-count-change", { playerId: this._player.id, stationsUsed: current - 1 });
+              this.emit("station-count-change", {
+                playerId: this._player.id,
+                stationsUsed: current - 1,
+              });
             } else if (e.target.closest(".station-inc") && current < 3) {
-              this.emit("station-count-change", { playerId: this._player.id, stationsUsed: current + 1 });
+              this.emit("station-count-change", {
+                playerId: this._player.id,
+                stationsUsed: current + 1,
+              });
             }
           });
         }
@@ -1002,6 +1030,7 @@
           const stationBonus = scorer.stationBonus(stationsUsed);
 
           this._colorDot.style.background = p.color;
+          this.style.setProperty("--player-color", p.color);
 
           if (document.activeElement !== this._nameInput) {
             this._nameInput.value = p.name;
@@ -1015,6 +1044,7 @@
             const row = ref.count.closest(".route-row");
             row.classList.toggle("inactive", !active);
             const count = p.routes.filter((r) => r === len).length;
+            row.classList.toggle("claimed", count > 0);
             ref.count.textContent = String(count);
             ref.minus.disabled = !active || count === 0;
             ref.plus.disabled = !active;
@@ -1024,9 +1054,8 @@
             this._destInput.value = destinationPoints;
           }
 
-          if (document.activeElement !== this._longestSelect) {
-            this._longestSelect.value = String(p.longestRoute);
-          }
+          this._longestSelect.textContent = p.longestRoute ? "Yes (+10)" : "No";
+          this._longestSelect.setAttribute("aria-pressed", String(p.longestRoute));
 
           const display = scorer.hasStations ? "" : "none";
           this._stationDivider.style.display = display;
@@ -1037,8 +1066,7 @@
           }
 
           const breakdownStation = scorer.hasStations ? ` · Stations: +${stationBonus}` : "";
-          this._breakdownEl.innerHTML =
-            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${p.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
+          this._breakdownEl.innerHTML = `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${p.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
         }
 
         updateScoreDisplay() {
@@ -1051,9 +1079,10 @@
           const stationBonus = scorer.stationBonus(this._player.stationsUsed || 0);
 
           this._totalEl.textContent = String(total);
+          this._longestSelect.textContent = this._player.longestRoute ? "Yes (+10)" : "No";
+          this._longestSelect.setAttribute("aria-pressed", String(this._player.longestRoute));
           const breakdownStation = scorer.hasStations ? ` · Stations: +${stationBonus}` : "";
-          this._breakdownEl.innerHTML =
-            `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
+          this._breakdownEl.innerHTML = `Routes: ${routePts} · Tickets: ${destinationPoints > 0 ? "+" : ""}${destinationPoints} · Longest: ${this._player.longestRoute ? "+10" : "0"}${breakdownStation} = <strong>${total} pts</strong>`;
         }
       }
 
@@ -1064,7 +1093,7 @@
 
         setupDOM() {
           this.className = "scoreboard";
-          this.innerHTML = `<h2>🏆 Leaderboard</h2><div class="scoreboard-rows"></div>`;
+          this.innerHTML = `<h2>Standings</h2><div class="scoreboard-rows"></div>`;
           this._rowsContainer = this.querySelector(".scoreboard-rows");
         }
 
@@ -1118,7 +1147,9 @@
             row._rankEl.textContent = i + 1;
             row._dotEl.style.background = p.color;
             row._nameEl.textContent = p.name;
-            const stationPart = scorer.hasStations ? `+${scorer.stationBonus(p.stationsUsed || 0)}st` : "";
+            const stationPart = scorer.hasStations
+              ? `+${scorer.stationBonus(p.stationsUsed || 0)}st`
+              : "";
             row._detailsEl.textContent = `${p.routes.length} routes · ${scorer.calcRoutePoints(p.routes)}+${p.destinationPoints || 0}${p.longestRoute ? "+10" : ""}${stationPart}`;
             row._scoreEl.textContent = scorer.calcTotal(p);
             fragment.appendChild(row);
@@ -1146,88 +1177,112 @@
           this._ac = new AbortController();
           const opts = { signal: this._ac.signal };
           this.renderShell();
-          this.addEventListener("name-change", (event) => {
-            if (this.store.hasRow("players", event.detail.id)) {
-              this.store.setCell("players", event.detail.id, "name", event.detail.name);
-              this.updateScoreboard();
-            }
-          }, opts);
-
-          this.addEventListener("remove-player", (event) => {
-            this.store.transaction(() => {
-              this.store.delRow("players", event.detail.id);
-              const routes = this.store.getTable("routes") || {};
-              Object.entries(routes).forEach(([routeId, route]) => {
-                if (String(route.playerId) === event.detail.id) {
-                  this.store.delRow("routes", routeId);
-                }
-              });
-            });
-            this.renderPlayers();
-          }, opts);
-
-          this.addEventListener("route-count-change", (event) => {
-            if (!this.store.hasRow("players", event.detail.id)) {
-              return;
-            }
-
-            if (event.detail.delta > 0) {
-              const routeId = String(this.store.getValue("nextRouteId") || 1);
-              const existingRoutes = this.getRoutesForPlayer(event.detail.id);
-              this.store.transaction(() => {
-                this.store.setRow("routes", routeId, {
-                  playerId: event.detail.id,
-                  len: event.detail.len,
-                  order: existingRoutes.length,
-                });
-                this.store.setValue("nextRouteId", Number(routeId) + 1);
-              });
-              this.refreshPlayerCard(event.detail.id);
-              return;
-            }
-
-            if (event.detail.delta < 0) {
-              const routeToRemove = this.getRoutesForPlayer(event.detail.id).find(
-                (route) => route.len === event.detail.len,
-              );
-              if (routeToRemove) {
-                this.store.delRow("routes", routeToRemove.id);
-                this.refreshPlayerCard(event.detail.id);
+          this.addEventListener(
+            "name-change",
+            (event) => {
+              if (this.store.hasRow("players", event.detail.id)) {
+                this.store.setCell("players", event.detail.id, "name", event.detail.name);
+                this.updateScoreboard();
               }
-            }
-          }, opts);
+            },
+            opts,
+          );
 
-          this.addEventListener("destination-change", (event) => {
-            if (this.store.hasRow("players", event.detail.id)) {
-              this.store.setCell(
-                "players",
-                event.detail.id,
-                "destinationPoints",
-                event.detail.destinationPoints,
-              );
-              this.updateScoreboard();
-            }
-          }, opts);
+          this.addEventListener(
+            "remove-player",
+            (event) => {
+              this.store.transaction(() => {
+                this.store.delRow("players", event.detail.id);
+                const routes = this.store.getTable("routes") || {};
+                Object.entries(routes).forEach(([routeId, route]) => {
+                  if (String(route.playerId) === event.detail.id) {
+                    this.store.delRow("routes", routeId);
+                  }
+                });
+              });
+              this.renderPlayers();
+            },
+            opts,
+          );
 
-          this.addEventListener("longest-route-change", (event) => {
-            if (this.store.hasRow("players", event.detail.id)) {
-              this.store.setCell(
-                "players",
-                event.detail.id,
-                "longestRoute",
-                event.detail.longestRoute,
-              );
-              this.updateScoreboard();
-            }
-          }, opts);
+          this.addEventListener(
+            "route-count-change",
+            (event) => {
+              if (!this.store.hasRow("players", event.detail.id)) {
+                return;
+              }
 
-          this.addEventListener("station-count-change", (event) => {
-            const { playerId, stationsUsed } = event.detail;
-            if (this.store.hasRow("players", playerId)) {
-              this.store.setCell("players", playerId, "stationsUsed", stationsUsed);
-              this.refreshPlayerCard(playerId);
-            }
-          }, opts);
+              if (event.detail.delta > 0) {
+                const routeId = String(this.store.getValue("nextRouteId") || 1);
+                const existingRoutes = this.getRoutesForPlayer(event.detail.id);
+                this.store.transaction(() => {
+                  this.store.setRow("routes", routeId, {
+                    playerId: event.detail.id,
+                    len: event.detail.len,
+                    order: existingRoutes.length,
+                  });
+                  this.store.setValue("nextRouteId", Number(routeId) + 1);
+                });
+                this.refreshPlayerCard(event.detail.id);
+                return;
+              }
+
+              if (event.detail.delta < 0) {
+                const routeToRemove = this.getRoutesForPlayer(event.detail.id).find(
+                  (route) => route.len === event.detail.len,
+                );
+                if (routeToRemove) {
+                  this.store.delRow("routes", routeToRemove.id);
+                  this.refreshPlayerCard(event.detail.id);
+                }
+              }
+            },
+            opts,
+          );
+
+          this.addEventListener(
+            "destination-change",
+            (event) => {
+              if (this.store.hasRow("players", event.detail.id)) {
+                this.store.setCell(
+                  "players",
+                  event.detail.id,
+                  "destinationPoints",
+                  event.detail.destinationPoints,
+                );
+                this.updateScoreboard();
+              }
+            },
+            opts,
+          );
+
+          this.addEventListener(
+            "longest-route-change",
+            (event) => {
+              if (this.store.hasRow("players", event.detail.id)) {
+                this.store.setCell(
+                  "players",
+                  event.detail.id,
+                  "longestRoute",
+                  event.detail.longestRoute,
+                );
+                this.updateScoreboard();
+              }
+            },
+            opts,
+          );
+
+          this.addEventListener(
+            "station-count-change",
+            (event) => {
+              const { playerId, stationsUsed } = event.detail;
+              if (this.store.hasRow("players", playerId)) {
+                this.store.setCell("players", playerId, "stationsUsed", stationsUsed);
+                this.refreshPlayerCard(playerId);
+              }
+            },
+            opts,
+          );
 
           this.initStorePersistence();
         }
@@ -1275,10 +1330,13 @@
         renderShell() {
           this.innerHTML = `
             <header>
-              <h1>Ticket to Ride</h1>
-              <p>Score Tracker</p>
+              <div class="header-title">
+                <span class="train" aria-hidden="true"><i></i><i></i><i></i></span>
+                <h1>Ticket to Ride</h1>
+                <p>Score Tracker</p>
+              </div>
               <div class="edition-toggle">
-                <button class="edition-btn" type="button" id="editionBtn">
+                <button class="edition-btn" type="button" id="editionBtn" aria-label="Game edition">
                   <span data-edition="original" class="active">Original</span><span data-edition="europe">Europe</span>
                 </button>
               </div>
@@ -1322,19 +1380,31 @@
             </main>
           `;
 
-          this.querySelector("#addPlayerBtn")?.addEventListener("click", () => {
-            this.addPlayer();
-          }, { signal: this._ac.signal });
+          this.querySelector("#addPlayerBtn")?.addEventListener(
+            "click",
+            () => {
+              this.addPlayer();
+            },
+            { signal: this._ac.signal },
+          );
 
-          this.querySelector("#resetBtn")?.addEventListener("click", () => {
-            this.resetAll();
-          }, { signal: this._ac.signal });
+          this.querySelector("#resetBtn")?.addEventListener(
+            "click",
+            () => {
+              this.resetAll();
+            },
+            { signal: this._ac.signal },
+          );
 
-          this.querySelector("#editionBtn")?.addEventListener("click", () => {
-            const current = this.store.getValue("edition") || "original";
-            this.store.setValue("edition", current === "original" ? "europe" : "original");
-            this.syncEdition();
-          }, { signal: this._ac.signal });
+          this.querySelector("#editionBtn")?.addEventListener(
+            "click",
+            () => {
+              const current = this.store.getValue("edition") || "original";
+              this.store.setValue("edition", current === "original" ? "europe" : "original");
+              this.syncEdition();
+            },
+            { signal: this._ac.signal },
+          );
         }
 
         syncEdition() {
@@ -1450,13 +1520,16 @@
 
           if (players.length === 0) {
             grid.innerHTML =
-              '<div class="empty-state">Add players to begin tracking scores</div>';
+              '<div class="empty-state">All aboard — add players to begin scoring</div>';
             this.updateScoreboard();
             return;
           }
 
           const existing = new Map(
-            Array.from(grid.querySelectorAll("ttr-player-card")).map((el) => [el.dataset.playerId, el]),
+            Array.from(grid.querySelectorAll("ttr-player-card")).map((el) => [
+              el.dataset.playerId,
+              el,
+            ]),
           );
 
           const fragment = document.createDocumentFragment();
