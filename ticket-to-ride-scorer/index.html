@@ -121,6 +121,7 @@
       .btn:focus-visible,
       .route-adjust:focus-visible,
       .special-input:focus-visible,
+      .expression-operator:focus-visible,
       .edition-btn:focus-visible,
       .btn-remove-player:focus-visible {
         outline: 2px solid var(--primary);
@@ -395,7 +396,7 @@
       /* Special scores */
       .special-scores {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
         gap: 0.6rem;
       }
 
@@ -427,6 +428,39 @@
       .special-input:focus {
         outline: none;
         border-color: var(--primary);
+      }
+
+      .destination-entry {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) repeat(2, var(--tap));
+        gap: 4px;
+      }
+
+      .dest-input[aria-invalid="true"] {
+        border-color: var(--danger);
+      }
+
+      .expression-operator {
+        min-width: var(--tap);
+        min-height: var(--tap);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-control);
+        background: var(--surface-2);
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 1.2rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .expression-operator:hover {
+        background: var(--border);
+      }
+
+      .expression-operator:active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: var(--primary-ink);
       }
 
       select.special-input {
@@ -706,6 +740,20 @@
         return JSON.parse(json);
       }
 
+      function calculateDestinationPoints(expression) {
+        const compact = String(expression).replace(/\s/g, "");
+        if (!compact) return 0;
+        if (!/^[+-]?\d+(?:[+-]\d+)*[+-]?$/.test(compact)) {
+          return null;
+        }
+
+        const completeExpression = compact.replace(/[+-]$/, "");
+        return (completeExpression.match(/[+-]?\d+/g) || []).reduce(
+          (total, term) => total + Number(term),
+          0,
+        );
+      }
+
       function getPersistedContentFromUrl() {
         const params = new URLSearchParams(window.location.search);
         const encoded = params.get(URL_STATE_KEY);
@@ -857,7 +905,11 @@
               <div class="special-scores">
                 <div class="special-field">
                   <label>Destination Tickets (net)</label>
-                  <input type="number" class="special-input dest-input" value="0" placeholder="0">
+                  <div class="destination-entry">
+                    <input type="text" inputmode="numeric" enterkeyhint="done" class="special-input dest-input" value="0" placeholder="0" aria-label="Destination ticket points or calculation" autocomplete="off">
+                    <button type="button" class="expression-operator" data-expression-operator="−" aria-label="Subtract">−</button>
+                    <button type="button" class="expression-operator" data-expression-operator="+" aria-label="Add">+</button>
+                  </div>
                 </div>
                 <div class="special-field">
                   <label>Longest Route +10</label>
@@ -937,12 +989,36 @@
           });
 
           this._destInput.addEventListener("input", (event) => {
-            const destinationPoints = Number(event.target.value) || 0;
+            const destinationPoints = calculateDestinationPoints(event.target.value);
+            event.target.setAttribute("aria-invalid", String(destinationPoints === null));
+            if (destinationPoints === null) return;
+
             this._player.destinationPoints = destinationPoints;
             this.updateScoreDisplay();
             this.emit("destination-change", {
               id: this._player.id,
               destinationPoints,
+            });
+          });
+
+          this._destInput.addEventListener("blur", () => {
+            this._destInput.value = String(this._player.destinationPoints || 0);
+            this._destInput.setAttribute("aria-invalid", "false");
+          });
+
+          this.querySelectorAll("[data-expression-operator]").forEach((button) => {
+            button.addEventListener("pointerdown", (event) => {
+              event.preventDefault();
+            });
+            button.addEventListener("click", () => {
+              const operator = button.dataset.expressionOperator === "−" ? "-" : "+";
+              const start = this._destInput.selectionStart ?? this._destInput.value.length;
+              const end = this._destInput.selectionEnd ?? start;
+              const value = this._destInput.value;
+              const replaceStart = start > 0 && /[+-]/.test(value[start - 1]) ? start - 1 : start;
+              this._destInput.setRangeText(operator, replaceStart, end, "end");
+              this._destInput.dispatchEvent(new Event("input", { bubbles: true }));
+              this._destInput.focus();
             });
           });
 
