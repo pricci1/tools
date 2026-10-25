@@ -15,6 +15,7 @@ A tiny, static, installable Progressive Web App (PWA) for receiving Mermaid synt
 - Accepts plain Mermaid syntax or Markdown fenced blocks tagged `mermaid`.
 - Renders the diagram automatically when shared, pasted, or edited.
 - Drag to pan; mouse-wheel or pinch with two fingers to zoom; **+ / − / Fit** buttons.
+- Fullscreen diagram view with zoom, pan, and SVG controls; use the toggle or Escape to exit. Falls back to a page-filling view when browser fullscreen is unavailable.
 - Copy source, send source using `navigator.share()`, or download rendered SVG.
 - Saves the last diagram in local storage; clears incoming shared text from the URL.
 - Offline-capable app shell via service worker; cache-on-use for Mermaid's CDN modules.

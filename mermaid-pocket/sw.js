@@ -1,12 +1,12 @@
 /* Static PWA shell, plus runtime caching for Mermaid's CDN ESM modules. */
-const CACHE_VERSION = 'mermaid-pocket-v1';
+const CACHE_VERSION = 'mermaid-pocket-v2';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  './styles.css?v=2',
+  './app.js?v=2',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'

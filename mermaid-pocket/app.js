@@ -11,6 +11,7 @@ const SAMPLE = `flowchart LR
 
 const el = {
   source: document.querySelector('#sourceInput'),
+  viewer: document.querySelector('.viewer-panel'),
   viewport: document.querySelector('#viewport'),
   layer: document.querySelector('#diagramLayer'),
   empty: document.querySelector('#emptyState'),
@@ -27,7 +28,8 @@ const el = {
   download: document.querySelector('#downloadBtn'),
   zoomIn: document.querySelector('#zoomInBtn'),
   zoomOut: document.querySelector('#zoomOutBtn'),
-  fit: document.querySelector('#fitBtn')
+  fit: document.querySelector('#fitBtn'),
+  fullscreen: document.querySelector('#fullscreenBtn')
 };
 
 const view = { x: 0, y: 0, scale: 1, width: 0, height: 0 };
@@ -221,6 +223,38 @@ el.viewport.addEventListener('keydown', (event) => {
 el.zoomIn.addEventListener('click', () => zoomBy(1.25));
 el.zoomOut.addEventListener('click', () => zoomBy(.8));
 el.fit.addEventListener('click', fitView);
+
+function setFullscreen(active) {
+  el.viewer.classList.toggle('is-fullscreen', active);
+  el.fullscreen.setAttribute('aria-pressed', String(active));
+  el.fullscreen.title = active ? 'Exit fullscreen' : 'Fullscreen diagram';
+  el.fullscreen.setAttribute('aria-label', el.fullscreen.title);
+  requestAnimationFrame(fitView);
+  if (!active) el.fullscreen.focus();
+}
+
+el.fullscreen.addEventListener('click', async () => {
+  if (document.fullscreenElement === el.viewer) {
+    try { await document.exitFullscreen(); }
+    catch (_) { report('Could not exit fullscreen', 'error'); }
+    return;
+  }
+  const active = !el.viewer.classList.contains('is-fullscreen');
+  setFullscreen(active);
+  if (active && document.fullscreenEnabled && el.viewer.requestFullscreen) {
+    try { await el.viewer.requestFullscreen(); }
+    catch (_) { /* Keep the page-filling view if native fullscreen is unavailable. */ }
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  setFullscreen(document.fullscreenElement === el.viewer);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && el.viewer.classList.contains('is-fullscreen')) {
+    event.preventDefault();
+    el.fullscreen.click();
+  }
+});
 
 function setSvgDimensions(svg) {
   const viewBox = svg.viewBox?.baseVal;

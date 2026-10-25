@@ -47,6 +47,10 @@ h2 { font-size: 17px; font-weight: 750; letter-spacing: -.35px; }
 .editor-actions .button-primary { flex: 1; }
 .editor-footer .keyboard-hint { font-size: 11px; text-align: center; }
 .viewer-panel { display: flex; flex-direction: column; min-width: 0; }
+.viewer-panel.is-fullscreen { position: fixed; inset: 0; z-index: 100; width: 100%; height: 100dvh; min-height: 0; border: 0; border-radius: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.viewer-panel.is-fullscreen .diagram-viewport { min-height: 0; }
+body:has(.viewer-panel.is-fullscreen) { overflow: hidden; }
+body:has(.viewer-panel.is-fullscreen) :is(.topbar, .editor-panel, .app-footer) { visibility: hidden; }
 .viewer-toolbar { height: 76px; padding: 17px 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .viewer-title .eyebrow { margin-bottom: 5px; }
 .viewer-controls { border: 1px solid #e8eaf2; border-radius: 11px; padding: 3px; background: #fcfcff; gap: 1px; }
@@ -54,6 +58,9 @@ h2 { font-size: 17px; font-weight: 750; letter-spacing: -.35px; }
 .viewer-controls button:hover { background: #eceefe; }
 .viewer-controls .fit-button { font-size: 12px; font-weight: 750; padding: 0 9px; }
 .viewer-controls output { display: inline-block; min-width: 49px; text-align: center; font-size: 11px; font-weight: 750; color: #6e7594; font-variant-numeric: tabular-nums; }
+#fullscreenBtn { display: grid; place-items: center; }
+#fullscreenBtn .fullscreen-exit, #fullscreenBtn[aria-pressed="true"] .fullscreen-enter { display: none; }
+#fullscreenBtn[aria-pressed="true"] .fullscreen-exit { display: block; }
 .control-divider { width: 1px; height: 18px; margin: 0 4px; background: #e4e7f2; }
 .diagram-viewport { position: relative; flex: 1; min-height: 320px; overflow: hidden; cursor: grab; touch-action: none; user-select: none; overscroll-behavior: contain; background-color: #fbfcff; background-image: radial-gradient(circle, #e5e8f3 .9px, transparent 1px); background-size: 20px 20px; }
 .diagram-viewport:active { cursor: grabbing; }
@@ -86,7 +93,7 @@ h2 { font-size: 17px; font-weight: 750; letter-spacing: -.35px; }
   .workspace { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: auto; }
   .viewer-panel { order: 0; min-height: 54svh; height: 54svh; }
   .editor-panel { order: 1; padding: 16px; min-height: 340px; }
-  .viewer-toolbar { height: 63px; padding: 11px 12px; }
+  .viewer-toolbar { height: auto; min-height: 63px; padding: 11px 12px; flex-wrap: wrap; flex-shrink: 0; }
   .diagram-viewport { min-height: 200px; }
   .viewer-bottom { padding: 8px 12px; }
   .viewer-hint { display: none; }
