@@ -1,0 +1,103 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #202744;
+  background: #f7f8fc;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, textarea:focus-visible, .diagram-viewport:focus-visible { outline: 3px solid #a2b3ff; outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+[hidden] { display: none !important; }
+.app-shell { display: flex; flex-direction: column; min-height: 100vh; padding: 20px 26px 12px; max-width: 1900px; margin: 0 auto; }
+.topbar { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 22px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-icon { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 14px; color: #fff; background: #5649dd; box-shadow: 0 8px 22px rgba(86,73,221,.15); }
+.brand-icon svg { width: 35px; height: 35px; }
+h1,h2,p { margin: 0; }
+h1 { font-size: 18px; font-weight: 800; letter-spacing: -.6px; line-height: 1.25; }
+.brand p { color: #8388a0; font-size: 12px; margin-top: 3px; }
+.top-actions, .editor-actions, .viewer-controls { display: flex; align-items: center; gap: 9px; }
+.app-pill { color: #7768a7; background: #ede9fb; border: 1px solid #e1dbfb; border-radius: 999px; padding: 7px 11px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.button { border: 1px solid transparent; border-radius: 10px; padding: 10px 14px; font-size: 12px; font-weight: 700; min-height: 36px; transition: background .14s ease, border-color .14s ease, transform .14s ease; white-space: nowrap; }
+.button:active { transform: translateY(1px); }
+.button-dark { background: #252844; color: white; }
+.button-dark:hover { background: #34385f; }
+.button-outline { color: #484c65; border-color: #e2e4ee; background: white; }
+.button-outline:hover { background: #f5f6fc; }
+.button-primary { color: white; background: #6254e9; }
+.button-primary:hover { background: #5143d5; }
+.button-link { padding: 6px; background: transparent; color: #6556df; border-color: transparent; }
+.button-link:hover { background: #eeedff; }
+.workspace { display: grid; grid-template-columns: minmax(295px, 355px) minmax(0, 1fr); gap: 18px; flex: 1; min-height: 520px; height: calc(100vh - 165px); }
+.editor-panel, .viewer-panel { border-radius: 16px; border: 1px solid #e9eaf2; background: white; box-shadow: 0 4px 20px rgba(38,46,83,.035); min-height: 0; overflow: hidden; }
+.editor-panel { display: flex; flex-direction: column; padding: 20px; gap: 16px; }
+.pane-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.eyebrow { display: block; color: #9ca0b3; font-size: 10px; font-weight: 800; letter-spacing: 1.55px; margin-bottom: 7px; }
+h2 { font-size: 17px; font-weight: 750; letter-spacing: -.35px; }
+#sourceInput { display: block; width: 100%; flex: 1; min-height: 210px; border: 1px solid #e4e6f1; resize: none; outline: none; border-radius: 11px; background: #f9faff; color: #333c66; padding: 18px 15px; line-height: 1.7; font: 12.5px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; tab-size: 2; }
+#sourceInput:focus { border-color: #9386ff; box-shadow: 0 0 0 3px rgba(100,86,222,.1); }
+.editor-footer { display: flex; flex-direction: column; gap: 12px; }
+.editor-footer p { color: #8d91a7; font-size: 12px; line-height: 1.5; }
+.editor-actions { justify-content: flex-end; }
+.editor-actions .button { min-width: 106px; }
+.editor-actions .button-primary { flex: 1; }
+.editor-footer .keyboard-hint { font-size: 11px; text-align: center; }
+.viewer-panel { display: flex; flex-direction: column; min-width: 0; }
+.viewer-toolbar { height: 76px; padding: 17px 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.viewer-title .eyebrow { margin-bottom: 5px; }
+.viewer-controls { border: 1px solid #e8eaf2; border-radius: 11px; padding: 3px; background: #fcfcff; gap: 1px; }
+.viewer-controls button { border: 0; background: transparent; color: #454a67; border-radius: 8px; min-width: 30px; height: 30px; padding: 0 4px; font-size: 20px; line-height: 1; }
+.viewer-controls button:hover { background: #eceefe; }
+.viewer-controls .fit-button { font-size: 12px; font-weight: 750; padding: 0 9px; }
+.viewer-controls output { display: inline-block; min-width: 49px; text-align: center; font-size: 11px; font-weight: 750; color: #6e7594; font-variant-numeric: tabular-nums; }
+.control-divider { width: 1px; height: 18px; margin: 0 4px; background: #e4e7f2; }
+.diagram-viewport { position: relative; flex: 1; min-height: 320px; overflow: hidden; cursor: grab; touch-action: none; user-select: none; overscroll-behavior: contain; background-color: #fbfcff; background-image: radial-gradient(circle, #e5e8f3 .9px, transparent 1px); background-size: 20px 20px; }
+.diagram-viewport:active { cursor: grabbing; }
+.diagram-layer { position: absolute; top: 0; left: 0; width: max-content; height: max-content; transform-origin: 0 0; will-change: transform; pointer-events: none; }
+.diagram-layer svg { display: block; max-width: none !important; overflow: visible; }
+.empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; color: #9aa0b7; pointer-events: none; }
+.empty-state strong { color: #535875; font-size: 16px; }
+.empty-state span { max-width: 260px; font-size: 12px; line-height: 1.4; }
+.empty-glyph { height: 70px; width: 70px; background: #f0efff; display: grid; place-items: center; border-radius: 20px; color: #8879f4; font-size: 40px; }
+.error-box { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2; max-height: 45%; overflow: auto; padding: 14px 16px; border: 1px solid #f3caca; background: #fff8f8; color: #a23742; border-radius: 12px; box-shadow: 0 8px 28px rgba(115,53,53,.08); }
+.error-box strong { font-size: 12px; }
+.error-box pre { margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 ui-monospace, Consolas, monospace; }
+.viewer-bottom { min-height: 47px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 20px; border-top: 1px solid #eeeff5; }
+.status { color: #7c829a; font-size: 11px; display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.status-dot { height: 7px; width: 7px; border-radius: 50%; background: #4fc3a1; flex: none; }
+.status[data-state="error"] .status-dot { background: #e05d64; }
+.status[data-state="working"] .status-dot { background: #e0ae53; }
+.viewer-hint { font-size: 11px; color: #a0a4b5; text-align: right; }
+.app-footer { padding-top: 12px; text-align: center; font-size: 11px; color: #a3a5b5; line-height: 1.5; }
+.app-footer strong { color: #7b7c93; }
+.sr-only { position: absolute; overflow: hidden; clip: rect(0,0,0,0); height: 1px; width: 1px; white-space: nowrap; }
+@media (max-width: 780px) {
+  .app-shell { padding: 12px 12px 16px; }
+  .topbar { min-height: 55px; margin-bottom: 12px; }
+  h1 { font-size: 16px; }
+  .brand p { font-size: 11px; }
+  .brand-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .brand-icon svg { width: 31px; height: 31px; }
+  .app-pill { display: none; }
+  .workspace { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: auto; }
+  .viewer-panel { order: 0; min-height: 54svh; height: 54svh; }
+  .editor-panel { order: 1; padding: 16px; min-height: 340px; }
+  .viewer-toolbar { height: 63px; padding: 11px 12px; }
+  .diagram-viewport { min-height: 200px; }
+  .viewer-bottom { padding: 8px 12px; }
+  .viewer-hint { display: none; }
+  #sourceInput { min-height: 170px; height: 170px; flex: none; }
+  .app-footer { padding-bottom: env(safe-area-inset-bottom); }
+}
+@media (max-width: 390px) {
+  .top-actions { gap: 4px; }
+  .top-actions .button { padding: 9px 10px; }
+  .viewer-controls { gap: 0; }
+  .viewer-controls output { min-width: 44px; }
+  .viewer-controls .fit-button { padding: 0 6px; }
+}
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition: none !important; } }
