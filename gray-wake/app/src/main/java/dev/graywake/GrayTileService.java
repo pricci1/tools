@@ -107,6 +107,8 @@ public final class GrayTileService extends TileService {
         return getString(R.string.tile_old_label, suffix);
     }
 
+    // The PendingIntent overload is only available on API 34+; older devices need Intent.
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     @SuppressWarnings("deprecation")
     private void openSetup() {
         Intent intent = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
