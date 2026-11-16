@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gray Wake</string>
+    <string name="tile_name">Grayscale</string>
+    <string name="tagline">Grayscale on every screen wake. One tile, one tap at a time.</string>
+    <string name="mode_disabled">Disabled</string>
+    <string name="mode_enabled">Enabled</string>
+    <string name="mode_snooze_minutes">Snooze %1$d min</string>
+    <string name="mode_snooze_hours">Snooze %1$d h</string>
+    <string name="snooze_remaining">%1$s · %2$d min left</string>
+    <string name="tile_description">Grayscale. %1$s. Tap for %2$s.</string>
+    <string name="tile_permission">Grant permission</string>
+    <string name="tile_error">Open setup</string>
+    <string name="tile_paused">Tap to resume</string>
+    <string name="tile_old_label">Gray: %1$s</string>
+    <string name="tile_old_off">Off</string>
+    <string name="tile_old_on">On</string>
+    <string name="tile_old_minutes">%1$d m</string>
+    <string name="tile_old_hours">12 h</string>
+    <string name="permission_missing">Secure-settings permission is missing. Run the ADB command below, then tap Retry / resume.</string>
+    <string name="operation_failed">Android could not apply grayscale. Check the permission, then tap Retry / resume. See logcat tag GrayWake for details.</string>
+    <string name="start_failed">Android blocked monitoring from starting. Open Gray Wake and tap Retry / resume. Check background battery restrictions if this repeats.</string>
+    <string name="notification_channel">Grayscale monitoring</string>
+    <string name="notification_channel_description">Quiet status while grayscale automation or a snooze is active.</string>
+    <string name="notification_enabled">Reapplies grayscale whenever the screen wakes.</string>
+    <string name="notification_snoozed">Color is on. Grayscale resumes automatically.</string>
+    <string name="disable">Disable</string>
+    <string name="disable_restore">Disable and restore color</string>
+    <string name="setup_title">One-time setup</string>
+    <string name="setup_instructions">Install the app, enable USB debugging on your phone, connect it to a computer with ADB, and run:</string>
+    <string name="adb_command" translatable="false">adb shell pm grant dev.graywake android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="copy_command">Copy ADB command</string>
+    <string name="command_copied">ADB command copied</string>
+    <string name="add_tile">Add Quick Settings tile</string>
+    <string name="manual_tile">Open Quick Settings, tap Edit, and drag Grayscale into your active tiles.</string>
+    <string name="tile_added">Grayscale tile is ready</string>
+    <string name="tile_add_failed">The tile was not added. Use Quick Settings → Edit to add it manually.</string>
+    <string name="retry">Retry / resume</string>
+    <string name="notifications">Show quiet status notification</string>
+    <string name="notification_settings">Notification settings</string>
+    <string name="battery_settings">App and battery settings</string>
+    <string name="settings_unavailable">That settings page is unavailable on this device.</string>
+    <string name="permission_granted">Secure settings: granted</string>
+    <string name="permission_not_granted">Secure settings: not granted</string>
+    <string name="status">Selected: %1$s\nMonitoring: %2$s</string>
+    <string name="running">running</string>
+    <string name="stopped">stopped</string>
+    <string name="cycle_title">Tap cycle</string>
+    <string name="cycle">Disabled → Enabled → Snooze 5 min → 15 min → 30 min → 45 min → 60 min → 12 h → Disabled</string>
+    <string name="behavior">Enabled turns grayscale on now and on each wake. Snooze turns color on now; each tap restarts the selected duration. Expiry returns to Enabled. If the phone is asleep, grayscale resumes on its next wake without waking it just for the timer.</string>
+    <string name="notes_title">Important</string>
+    <string name="notes">This changes Android color correction. Snooze and Disable turn correction off; a previous correction mode is not restored. Other grayscale features, such as Bedtime mode, can still affect the screen.\n\nA quiet foreground service runs while enabled or snoozing. Notification permission is optional. Disable before uninstalling, clearing data, or force-stopping the app; those actions do not undo a system color setting.\n\nIf Android stops monitoring, reopen this page and tap Retry / resume, or tap the paused tile. Some phones also need unrestricted battery usage for reliable background operation.</string>
+</resources>

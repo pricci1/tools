@@ -1,0 +1,12 @@
+#!/bin/sh
+# Minimal launcher for the official checksum-verified Gradle wrapper.
+set -eu
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+"$APP_HOME/tools/bootstrap-wrapper.sh"
+if [ -n "${JAVA_HOME:-}" ]; then JAVACMD="$JAVA_HOME/bin/java"; else JAVACMD=java; fi
+cd "$APP_HOME"
+# JAVA_OPTS / GRADLE_OPTS follow the usual whitespace-separated JVM options convention.
+# shellcheck disable=SC2086
+exec "$JAVACMD" ${JAVA_OPTS:-} ${GRADLE_OPTS:-} -Dorg.gradle.appname=gradlew \
+    -classpath "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
+    org.gradle.wrapper.GradleWrapperMain "$@"

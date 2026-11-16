@@ -1,0 +1,52 @@
+name: Gray Wake Android build
+on:
+  push:
+    paths:
+      - 'gray-wake/**'
+      - '.github/workflows/gray-wake-android.yml'
+  pull_request:
+    paths:
+      - 'gray-wake/**'
+      - '.github/workflows/gray-wake-android.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    working-directory: gray-wake
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install pinned Android SDK packages
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+      - name: Offline policy and project checks
+        run: |
+          ./tools/test-core.sh
+          ./tools/test-settings.sh
+          python3 tools/check-project.py
+          python3 tools/test-bootstrap.py
+      - name: Android lint, core tests, and APK
+        run: ./gradlew --no-daemon :app:lintDebug :app:coreTest :app:assembleDebug
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: gray-wake-debug
+          path: gray-wake/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gray-wake-android-lint
+          path: gray-wake/app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore

@@ -1,0 +1,14 @@
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+*.jks
+*.keystore
+.externalNativeBuild/
+.cxx/
+# Bootstrap downloads the official checksum-verified binary on first build.
+gradle/wrapper/gradle-wrapper.jar
+*.part
+__pycache__/
+gradle/wrapper/*.part.*
