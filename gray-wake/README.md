@@ -3,16 +3,15 @@
 A minimal, local-only Android app whose primary UI is one **Grayscale** Quick Settings tile.
 No Tasker, root, accessibility service, network access, analytics, or third-party runtime libraries.
 
-> **Delivery status:** The source is implemented and committed. 24 domain tests and 10
-> settings-adapter tests pass locally, along with syntax/structure checks. The Android SDK
-> is unavailable in the delivery environment, and build downloads are blocked, so **no APK
-> has been compiled here and no Android device tests have run**. The included CI workflow
-> is configured to build a debug APK; it has not been executed as part of this delivery.
+> **Validation status:** Android lint, the debug APK build, 25 domain tests and 10
+> settings-adapter tests pass locally, along with syntax/structure checks.
+> **No Android device tests have run.** The repository's root-level
+> `.github/workflows/gray-wake-android.yml` builds and uploads a debug APK on push.
 
 ## Behavior
 
 ```text
-Disabled → Enabled → Snooze 5 min → Snooze 15 min → Snooze 30 min
+Disabled → Enabled → Snooze until next wake → Snooze 5 min → Snooze 15 min → Snooze 30 min
          → Snooze 45 min → Snooze 60 min → Snooze 12 h → Disabled → …
 ```
 
@@ -20,12 +19,16 @@ Disabled → Enabled → Snooze 5 min → Snooze 15 min → Snooze 30 min
 | --- | --- | --- |
 | Disabled | Turns Android color correction off immediately | Service stopped |
 | Enabled | Applies grayscale immediately and again on each screen wake | Running |
-| Snooze | Turns color correction off immediately; resumes Enabled at expiry | Running |
+| Snooze until next wake | Turns color correction off immediately; resumes Enabled when the screen next turns on | Running, no timer |
+| Timed snooze | Turns color correction off immediately; resumes Enabled at expiry | Running |
 
-Each snooze tap starts a **new duration from that tap**, not an extension of the previous
-one. Expiration returns to **Enabled**; the next normal tap then selects Snooze 5 min.
-The tile displays the selected preset and remaining minutes where Android supports a
-subtitle. Enabled is highlighted; snoozed uses a clock icon and is not highlighted.
+Wake snooze lasts until the next **screen-on event**, not merely an unlock, clock change,
+or service restart. It is saved across process recreation. Tap again before the next wake
+to select Snooze 5 min. Each timed snooze tap starts a **new duration from that tap**,
+not an extension of the previous one. Both wake and timed snoozes return to **Enabled**;
+the next normal tap then selects Snooze until next wake. The tile displays the selected
+preset and, for timed snoozes, remaining minutes where Android supports a subtitle.
+Enabled is highlighted; snoozed uses a clock icon and is not highlighted.
 
 While awake, a main-thread timer handles expiration. While the device is asleep, the app
 does not wake the CPU just to change colors. The next screen-on event checks the stored
@@ -35,7 +38,7 @@ slept. There can be normal system broadcast/display-update latency on wake.
 
 If monitoring was stopped by Android, the tile shows **Tap to resume**; that recovery tap
 resumes the existing selection rather than advancing it. Permission/write errors open the
-setup page. These are recovery exceptions to the normal eight-state tap loop.
+setup page. These are recovery exceptions to the normal nine-state tap loop.
 
 ## Build
 
@@ -157,7 +160,7 @@ python3 tools/check-project.py
 python3 tools/test-bootstrap.py
 ```
 
-The 24 core cases execute 15,204 assertions, including 5,000 seeded randomized transitions.
+The 25 core cases execute 15,240 assertions, including 5,000 seeded randomized transitions.
 The 10 adapter cases execute 20 assertions using explicitly fake Android provider classes.
 Fakes live under `tools/fakes` and are **not included in the app**. Adapter tests exercise
 production setting-write/rollback logic, not real platform behavior.

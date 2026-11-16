@@ -5,6 +5,7 @@
     <string name="tagline">Grayscale on every screen wake. One tile, one tap at a time.</string>
     <string name="mode_disabled">Disabled</string>
     <string name="mode_enabled">Enabled</string>
+    <string name="mode_snooze_until_wake">Snooze until next wake</string>
     <string name="mode_snooze_minutes">Snooze %1$d min</string>
     <string name="mode_snooze_hours">Snooze %1$d h</string>
     <string name="snooze_remaining">%1$s · %2$d min left</string>
@@ -15,6 +16,7 @@
     <string name="tile_old_label">Gray: %1$s</string>
     <string name="tile_old_off">Off</string>
     <string name="tile_old_on">On</string>
+    <string name="tile_old_until_wake">Until wake</string>
     <string name="tile_old_minutes">%1$d m</string>
     <string name="tile_old_hours">12 h</string>
     <string name="permission_missing">Secure-settings permission is missing. Run the ADB command below, then tap Retry / resume.</string>
@@ -46,8 +48,8 @@
     <string name="running">running</string>
     <string name="stopped">stopped</string>
     <string name="cycle_title">Tap cycle</string>
-    <string name="cycle">Disabled → Enabled → Snooze 5 min → 15 min → 30 min → 45 min → 60 min → 12 h → Disabled</string>
-    <string name="behavior">Enabled turns grayscale on now and on each wake. Snooze turns color on now; each tap restarts the selected duration. Expiry returns to Enabled. If the phone is asleep, grayscale resumes on its next wake without waking it just for the timer.</string>
+    <string name="cycle">Disabled → Enabled → Snooze until next wake → 5 min → 15 min → 30 min → 45 min → 60 min → 12 h → Disabled</string>
+    <string name="behavior">Enabled turns grayscale on now and on each wake. Snooze until next wake turns color on until the screen next turns on, then returns to Enabled. Tap again before that wake to select Snooze 5 min. Timed snoozes start a fresh duration on each tap and return to Enabled at expiry. If the phone is asleep, grayscale resumes on its next wake without waking it just for the timer.</string>
     <string name="notes_title">Important</string>
     <string name="notes">This changes Android color correction. Snooze and Disable turn correction off; a previous correction mode is not restored. Other grayscale features, such as Bedtime mode, can still affect the screen.\n\nA quiet foreground service runs while enabled or snoozing. Notification permission is optional. Disable before uninstalling, clearing data, or force-stopping the app; those actions do not undo a system color setting.\n\nIf Android stops monitoring, reopen this page and tap Retry / resume, or tap the paused tile. Some phones also need unrestricted battery usage for reliable background operation.</string>
 </resources>

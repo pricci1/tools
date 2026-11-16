@@ -23,8 +23,11 @@ Inspect the actual display as well as settings and tile labels.
 | Fresh install without ADB grant | Starts Disabled; opening setup does not alter color; tile opens setup rather than falsely claiming success |
 | Grant permission and add tile | Tile initially says Disabled; no monitoring service is running |
 | First tile tap | Enabled, correction mode 0 and enabled 1, quiet foreground notification |
-| All eight steps and wrap | Enabled → 5 → 15 → 30 → 45 → 60 → 12 h → Disabled; subsequent tap enables again |
-| Each snooze tap | Correction enabled becomes 0 immediately; preset duration starts from that tap, not from the first snooze |
+| All nine steps and wrap | Enabled → Until next wake → 5 → 15 → 30 → 45 → 60 → 12 h → Disabled; subsequent tap enables again |
+| Snooze until next wake | Correction enabled becomes 0 immediately; tile/notification say Until next wake without a countdown; screen off/on returns to Enabled and correction enabled 1 |
+| Wake snooze without screen off/on | Unlock, clock changes, and Retry / resume do not end the snooze; time passing alone does not expire it |
+| Tap again during wake snooze | Selects Snooze 5 min with a fresh five-minute deadline |
+| Each timed snooze tap | Correction enabled becomes 0 immediately; preset duration starts from that tap, not from the first snooze |
 | Rapid taps | No skipped/reordered persisted transitions; final state matches total accepted taps |
 | Five-minute expiry with display awake | Returns to Enabled automatically, without another tap |
 | Sleep across expiry | No app wake alarm; first subsequent screen-on event reconciles the deadline and reapplies grayscale |
@@ -34,7 +37,8 @@ Inspect the actual display as well as settings and tile labels.
 | Disable from tile or safety button | Correction turns off; monitoring service and its notification stop |
 | Remove tile | Does not silently disable active monitoring; notification/setup Disable remains available |
 | Change wall clock forward/backward during a boot | Monotonic snooze remaining time does not change |
-| Reboot during snooze | Deadline is recovered from wall time; after boot it is again monotonic and bounded to the preset |
+| Reboot during timed snooze | Deadline is recovered from wall time; after boot it is again monotonic and bounded to the preset |
+| Process recreation during wake snooze | Preserves Until next wake; next observed screen-on event returns to Enabled |
 | Reboot after snooze deadline | Returns to Enabled |
 | Reboot while Disabled | Remains Disabled; no monitoring service started |
 | Revoke secure-settings permission | No crash loop or silent successful transition; setup explains the missing grant |

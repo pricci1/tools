@@ -90,7 +90,7 @@ public final class GrayTileService extends TileService {
         }
         if (Build.VERSION.SDK_INT >= 30) tile.setStateDescription(status);
         tile.updateTile();
-        if (state.mode.isSnoozed()) {
+        if (state.mode.isTimedSnooze()) {
             long remaining = state.remainingMillis(now);
             long untilMinuteChange = remaining % 60_000;
             if (untilMinuteChange == 0) untilMinuteChange = 60_000;
@@ -102,6 +102,7 @@ public final class GrayTileService extends TileService {
         String suffix;
         if (mode == Mode.DISABLED) suffix = getString(R.string.tile_old_off);
         else if (mode == Mode.ENABLED) suffix = getString(R.string.tile_old_on);
+        else if (mode == Mode.SNOOZE_UNTIL_WAKE) suffix = getString(R.string.tile_old_until_wake);
         else if (mode == Mode.SNOOZE_12H) suffix = getString(R.string.tile_old_hours);
         else suffix = getString(R.string.tile_old_minutes, mode.durationMillis / 60_000);
         return getString(R.string.tile_old_label, suffix);

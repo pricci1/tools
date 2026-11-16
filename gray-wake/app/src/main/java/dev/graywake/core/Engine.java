@@ -26,11 +26,18 @@ public final class Engine {
         return applyAndSave(previous, previous.next(now), true);
     }
 
-    /** Runs at service start, screen wake, unlock, time changes, and timer expiry. */
+    /** Runs at service start, unlock, time changes, and timer expiry. */
     public State reconcile(TimePoint now) {
         State previous = store.load();
         State next = previous.resolve(now);
         // Merely opening the app while disabled must not alter accessibility settings.
+        return applyAndSave(previous, next, next.mode.isMonitoring());
+    }
+
+    /** Only an actual screen-on event ends the untimed wake snooze. */
+    public State onScreenWake(TimePoint now) {
+        State previous = store.load();
+        State next = previous.mode == Mode.SNOOZE_UNTIL_WAKE ? State.enabled() : previous.resolve(now);
         return applyAndSave(previous, next, next.mode.isMonitoring());
     }
 

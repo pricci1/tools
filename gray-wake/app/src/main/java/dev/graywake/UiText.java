@@ -12,13 +12,14 @@ final class UiText {
         switch (mode) {
             case DISABLED: return context.getString(R.string.mode_disabled);
             case ENABLED: return context.getString(R.string.mode_enabled);
+            case SNOOZE_UNTIL_WAKE: return context.getString(R.string.mode_snooze_until_wake);
             case SNOOZE_12H: return context.getString(R.string.mode_snooze_hours, 12);
             default: return context.getString(R.string.mode_snooze_minutes, mode.durationMillis / 60_000);
         }
     }
 
     static String description(Context context, State state, TimePoint now) {
-        if (!state.mode.isSnoozed()) return mode(context, state.mode);
+        if (!state.mode.isTimedSnooze()) return mode(context, state.mode);
         long minutes = (state.remainingMillis(now) + 59_999) / 60_000;
         return context.getString(R.string.snooze_remaining, mode(context, state.mode), minutes);
     }

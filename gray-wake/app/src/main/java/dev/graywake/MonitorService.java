@@ -29,11 +29,11 @@ public final class MonitorService extends Service {
     private Engine engine;
     private int latestStartId;
     private boolean receiverRegistered;
-    private final Runnable expiration = this::reconcile;
+    private final Runnable expiration = () -> reconcile(false);
 
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
-            if (isRunning) reconcile();
+            if (isRunning) reconcile(Intent.ACTION_SCREEN_ON.equals(intent.getAction()));
         }
     };
 
@@ -79,9 +79,10 @@ public final class MonitorService extends Service {
         }
     }
 
-    private void reconcile() {
+    private void reconcile(boolean screenWake) {
         try {
-            State state = engine.reconcile(AndroidClock.now(this));
+            State state = screenWake ? engine.onScreenWake(AndroidClock.now(this))
+                    : engine.reconcile(AndroidClock.now(this));
             store.setError("");
             render(state);
         } catch (RuntimeException failure) {
@@ -98,7 +99,7 @@ public final class MonitorService extends Service {
             stopSelfResult(latestStartId);
         } else {
             promote(state);
-            if (state.mode.isSnoozed()) {
+            if (state.mode.isTimedSnooze()) {
                 long remaining = state.remainingMillis(AndroidClock.now(this));
                 // Handler uses uptime. SCREEN_ON always recomputes elapsed time after sleep.
                 handler.postDelayed(expiration, Math.max(1, remaining));
@@ -132,9 +133,9 @@ public final class MonitorService extends Service {
                 .setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .addAction(new Notification.Action.Builder(null, getString(R.string.disable), disable).build());
-        if (state.mode.isSnoozed()) {
-            builder.setSubText(UiText.mode(this, state.mode))
-                    .setWhen(System.currentTimeMillis() + state.remainingMillis(AndroidClock.now(this)))
+        if (state.mode.isSnoozed()) builder.setSubText(UiText.mode(this, state.mode));
+        if (state.mode.isTimedSnooze()) {
+            builder.setWhen(System.currentTimeMillis() + state.remainingMillis(AndroidClock.now(this)))
                     .setShowWhen(true).setUsesChronometer(true).setChronometerCountDown(true);
         }
         return builder.build();

@@ -16,7 +16,7 @@ public final class CoreTests {
         test("all preset durations", CoreTests::durations);
         test("each tap replaces, not extends, the timer", CoreTests::resetDeadline);
         test("expiration boundary", CoreTests::expiration);
-        test("tap after expiration starts a fresh 5m snooze", CoreTests::tapAfterExpiry);
+        test("tap after expiration selects wake snooze, then fresh 5m snooze", CoreTests::tapAfterExpiry);
         test("deep sleep counts toward expiry", CoreTests::sleep);
         test("wall clock and timezone changes within one boot", CoreTests::wallChanges);
         test("reboot rebases remaining duration", CoreTests::reboot);
@@ -27,6 +27,7 @@ public final class CoreTests {
         test("state equality and hashing", CoreTests::equality);
         test("disabled reconciliation has no side effects", CoreTests::disabledNoWrites);
         test("wake re-applies grayscale", CoreTests::wake);
+        test("wake snooze survives time and recreation, ends only on screen wake", CoreTests::untilWake);
         test("snooze restores color and then resumes", CoreTests::snooze);
         test("explicit disable restores color", CoreTests::disable);
         test("failed display write does not advance state", CoreTests::displayFailure);
@@ -41,12 +42,12 @@ public final class CoreTests {
 
     private static void fullCycle() {
         State s = State.disabled();
-        Mode[] order = {Mode.ENABLED, Mode.SNOOZE_5, Mode.SNOOZE_15, Mode.SNOOZE_30,
+        Mode[] order = {Mode.ENABLED, Mode.SNOOZE_UNTIL_WAKE, Mode.SNOOZE_5, Mode.SNOOZE_15, Mode.SNOOZE_30,
                 Mode.SNOOZE_45, Mode.SNOOZE_60, Mode.SNOOZE_12H, Mode.DISABLED, Mode.ENABLED};
         for (Mode mode : order) { s = s.next(START); equal(mode, s.mode); }
     }
     private static void durations() {
-        long[] minutes = {0, 0, 5, 15, 30, 45, 60, 720};
+        long[] minutes = {0, 0, 0, 5, 15, 30, 45, 60, 720};
         for (Mode m : Mode.values()) {
             State s = State.select(m, START);
             equal(minutes[m.ordinal()] * 60_000L, s.remainingMillis(START));
@@ -63,7 +64,7 @@ public final class CoreTests {
         equal(later.elapsedMillis + 900_000, s.deadlineElapsedMillis);
     }
     private static void expiration() {
-        for (Mode m : Mode.values()) if (m.isSnoozed()) {
+        for (Mode m : Mode.values()) if (m.isTimedSnooze()) {
             State s = State.select(m, START);
             equal(m, s.resolve(later(START, m.durationMillis - 1)).mode);
             equal(Mode.ENABLED, s.resolve(later(START, m.durationMillis)).mode);
@@ -71,9 +72,11 @@ public final class CoreTests {
         }
     }
     private static void tapAfterExpiry() {
-        for (Mode m : Mode.values()) if (m.isSnoozed()) {
+        for (Mode m : Mode.values()) if (m.isTimedSnooze()) {
             TimePoint t = later(START, m.durationMillis);
             State s = State.select(m, START).next(t);
+            equal(Mode.SNOOZE_UNTIL_WAKE, s.mode);
+            s = s.next(t);
             equal(Mode.SNOOZE_5, s.mode);
             equal(300_000L, s.remainingMillis(t));
         }
@@ -137,20 +140,47 @@ public final class CoreTests {
     private static void disabledNoWrites() {
         Fixture f = new Fixture();
         f.engine.reconcile(START);
+        f.engine.onScreenWake(START);
         equal(0, f.writes.size()); equal(0, f.saves);
     }
     private static void wake() {
         Fixture f = new Fixture(); f.engine.advance(START);
-        f.engine.reconcile(later(START, 10)); f.engine.reconcile(later(START, 20));
+        f.engine.onScreenWake(later(START, 10)); f.engine.onScreenWake(later(START, 20));
         equal(List.of(true, true, true), f.writes); equal(1, f.saves);
     }
+    private static void untilWake() {
+        Fixture f = new Fixture();
+        equal(Mode.ENABLED, f.engine.advance(START).mode);
+        State snoozed = f.engine.advance(START);
+        equal(Mode.SNOOZE_UNTIL_WAKE, snoozed.mode);
+        equal(false, f.writes.get(f.writes.size() - 1));
+        check(snoozed.mode.isSnoozed());
+        check(snoozed.mode.isMonitoring());
+        check(!snoozed.mode.isTimedSnooze());
+        equal(0L, snoozed.deadlineElapsedMillis);
+        equal(0L, snoozed.deadlineWallMillis);
+        TimePoint muchLater = later(START, 7 * 86_400_000L);
+        equal(snoozed, f.engine.reconcile(muchLater));
+        equal(false, f.writes.get(f.writes.size() - 1));
+        f.state = State.restore(snoozed.mode.name(), snoozed.deadlineElapsedMillis,
+                snoozed.deadlineWallMillis, snoozed.bootCount);
+        f.engine = new Engine(f, f);
+        equal(snoozed, f.engine.reconcile(muchLater));
+        equal(Mode.ENABLED, f.engine.onScreenWake(muchLater).mode);
+        equal(true, f.writes.get(f.writes.size() - 1));
+        equal(Mode.SNOOZE_UNTIL_WAKE, f.engine.advance(muchLater).mode);
+        State timed = f.engine.advance(later(muchLater, 2_000));
+        equal(Mode.SNOOZE_5, timed.mode);
+        equal(300_000L, timed.remainingMillis(later(muchLater, 2_000)));
+    }
     private static void snooze() {
-        Fixture f = new Fixture(); f.engine.advance(START); f.engine.advance(START);
-        equal(false, f.writes.get(1));
-        equal(Mode.SNOOZE_5, f.engine.reconcile(later(START, 299_999)).mode);
+        Fixture f = new Fixture();
+        f.engine.advance(START); f.engine.advance(START); f.engine.advance(START);
         equal(false, f.writes.get(2));
-        equal(Mode.ENABLED, f.engine.reconcile(later(START, 300_000)).mode);
-        equal(true, f.writes.get(3));
+        equal(Mode.SNOOZE_5, f.engine.onScreenWake(later(START, 299_999)).mode);
+        equal(false, f.writes.get(3));
+        equal(Mode.ENABLED, f.engine.onScreenWake(later(START, 300_000)).mode);
+        equal(true, f.writes.get(4));
     }
     private static void disable() {
         Fixture f = new Fixture(); f.engine.advance(START); f.engine.disable();
@@ -173,7 +203,8 @@ public final class CoreTests {
         equal(1, e.getSuppressed().length);
     }
     private static void processRecreation() {
-        Fixture f = new Fixture(); f.engine.advance(START); f.engine.advance(START);
+        Fixture f = new Fixture();
+        f.engine.advance(START); f.engine.advance(START); f.engine.advance(START);
         f.engine = new Engine(f, f);
         State s = f.engine.reconcile(later(START, 180_000));
         equal(Mode.SNOOZE_5, s.mode); equal(120_000L, s.remainingMillis(later(START, 180_000)));
@@ -184,11 +215,11 @@ public final class CoreTests {
     }
     private static void rapidTaps() {
         Fixture f = new Fixture();
-        for (int i = 0; i < 80; i++) {
+        for (int i = 0; i < 90; i++) {
             f.engine.advance(later(START, i));
-            equal(Mode.values()[(i + 1) % 8], f.state.mode);
+            equal(Mode.values()[(i + 1) % 9], f.state.mode);
         }
-        equal(80, f.writes.size());
+        equal(90, f.writes.size());
     }
     private static void randomized() {
         Random random = new Random(0x47524159);
@@ -201,7 +232,7 @@ public final class CoreTests {
             long remaining = state.remainingMillis(now);
             check(remaining >= 0 && remaining <= state.mode.durationMillis);
             equal(state, state.resolve(now));
-            if (state.mode.isSnoozed()) check(remaining > 0);
+            if (state.mode.isTimedSnooze()) check(remaining > 0);
             else equal(0L, remaining);
         }
     }

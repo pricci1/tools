@@ -1,11 +1,14 @@
 # Design decisions
 
-1. The tile cycles the requested eight states; there are no menus or long-press
+1. The tile cycles nine states, including Snooze until next wake between Enabled and
+   Snooze 5 min; there are no menus or long-press
    gestures in the normal workflow. Long press is reserved for setup/recovery.
 2. One native foreground service dynamically registers SCREEN_ON while enabled or
    snoozing. A manifest-only SCREEN_ON receiver would not work.
 3. Timers use monotonic elapsed time during a boot. Persisted wall time is only a
    reboot fallback. Expired snoozes return to Enabled before processing a new tap.
+   Wake snooze has no deadline and ends only on SCREEN_ON, not unlock, time changes,
+   or service restart. Timed snoozes still honor their deadlines across early wakes.
 4. Do not acquire wake locks, poll, or request exact-alarm access. A Handler handles
    expiry while awake; SCREEN_ON reconciles elapsed time after deep sleep.
 5. System color correction is shared with Accessibility settings. Enabled chooses

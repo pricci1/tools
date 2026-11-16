@@ -21,21 +21,21 @@ public final class State {
     private static State plain(Mode mode) { return new State(mode, 0, 0, -1); }
 
     public static State select(Mode mode, TimePoint now) {
-        if (!mode.isSnoozed()) return plain(mode);
+        if (!mode.isTimedSnooze()) return plain(mode);
         return new State(mode, now.elapsedMillis + mode.durationMillis,
                 now.wallMillis + mode.durationMillis, now.bootCount);
     }
 
     public static State restore(String name, long elapsed, long wall, int bootCount) {
         Mode mode = Mode.parse(name);
-        if (!mode.isSnoozed()) return plain(mode);
+        if (!mode.isTimedSnooze()) return plain(mode);
         // Broken saved deadlines must not leave grayscale snoozed forever.
         if (elapsed <= 0 || wall <= 0) return enabled();
         return new State(mode, elapsed, wall, bootCount);
     }
 
     public long remainingMillis(TimePoint now) {
-        if (!mode.isSnoozed()) return 0;
+        if (!mode.isTimedSnooze()) return 0;
         boolean sameBoot = bootCount >= 0 && now.bootCount == bootCount;
         long remaining = sameBoot
                 ? deadlineElapsedMillis - now.elapsedMillis
@@ -45,7 +45,7 @@ public final class State {
     }
 
     public State resolve(TimePoint now) {
-        if (!mode.isSnoozed()) return this;
+        if (!mode.isTimedSnooze()) return this;
         long remaining = remainingMillis(now);
         if (remaining == 0) return enabled();
         // Rebase elapsed time after reboot and keep a fresh wall-clock fallback.
